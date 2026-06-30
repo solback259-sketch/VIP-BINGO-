@@ -8,34 +8,50 @@
     <style>
         body { font-family: 'Segoe UI', sans-serif; background-color: #1a1540; color: white; text-align: center; margin: 0; padding: 15px; }
         .welcome-box { background: #251f5c; padding: 10px; border-radius: 10px; margin-bottom: 15px; border: 1px solid #3d3580; }
-        .grid-container { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; max-height: 400px; overflow-y: auto; padding: 5px; background: #251f5c; border-radius: 12px; }
+        .timer-box { font-size: 20px; font-weight: bold; color: #ffc107; background: #ff5722; padding: 8px; border-radius: 8px; margin-bottom: 10px; display: inline-block; width: 80%; box-shadow: 0 0 10px rgba(255,87,34,0.5); }
+        .grid-container { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; max-height: 320px; overflow-y: auto; padding: 5px; background: #251f5c; border-radius: 12px; margin-bottom: 15px; }
         .card-btn { background-color: #3d3580; color: white; border: none; padding: 12px 0; font-size: 14px; font-weight: bold; border-radius: 6px; cursor: pointer; }
         .card-btn.selected { background-color: #ff5722 !important; box-shadow: 0 0 8px #ff5722; }
-        .action-btn { background: linear-gradient(135deg, #00c853, #009624); color: white; border: none; width: 100%; padding: 15px; font-size: 18px; font-weight: bold; border-radius: 10px; margin-top: 15px; cursor: pointer; display: none; }
+        
+        /* 📍 ከተደራራቢው ሰሌዳ በታች የተመረጡትን በግልጽ ማሳያ ዞን */
+        .summary-box { background: linear-gradient(135deg, #251f5c, #3d3580); padding: 12px; border-radius: 10px; border: 1px solid #ffc107; margin-top: 10px; }
+        .selected-list { display: flex; justify-content: center; gap: 10px; margin-top: 8px; }
+        .selected-badge { background: #00c853; color: white; padding: 6px 12px; font-size: 16px; font-weight: bold; border-radius: 20px; box-shadow: 0 0 5px #00c853; }
     </style>
 </head>
 <body>
 
     <div class="welcome-box">
-        <h3 style="margin: 5px 0; color: #ffc107;">እንኳን ደህና መጡ! 🎁</h3>
-        <p style="margin: 5px 0; font-size: 12px;">ለአዲስ ተጫዋች 10 ብር ተሰጥቶዎታል። እስከ 3 ካርቴላ መምረጥ ይችላሉStack።</p>
-        <p style="margin: 5px 0; font-size: 13px; font-weight: bold; color: #00c853;">የተመረጡ፦ <span id="selected-count">0/3</span></p>
+        <!-- ⏱️ የ 40 ሰከንድ አውቶማቲክ መቁጠሪያ -->
+        <div class="timer-box" id="countdown-timer">ጨዋታው ለመጀመር፡ 40 ሰከንድ</div>
+        <p style="margin: 5px 0; font-size: 12px;">እስከ 3 ካርቴላ መምረጥ ይችላሉ (1 ካርቴላ = 10 ብር)።</p>
+        <p style="margin: 5px 0; font-size: 13px; font-weight: bold; color: #00c853;">የተመረጡ ካርቴላዎች ብዛት፦ <span id="selected-count">0/3</span></p>
+        <p style="margin: 5px 0; font-size: 13px; color: #ffc107; font-weight: bold;">የሚቆረጠው ሂሳብ፦ <span id="bet-amount">0</span> ETB</p>
     </div>
 
+    <!-- 🎰 የ 1-200 የቁጥር ምርጫ ሰሌዳ -->
     <div class="grid-container" id="cards-grid"></div>
 
-    <button class="action-btn" id="start-game-btn" onclick="goToGame()">ወደ ጨዋታው ግባ (BET 10 ETB)</button>
+    <!-- 📍 የታችኛው ፈጣን መመልከቻ (Quick View ለስክሮል ጊዜ) -->
+    <div class="summary-box">
+        <span style="font-size: 14px; font-weight: bold; color: #ffc107;">የመረጧቸው የካርቴላ ቁጥሮች፦</span>
+        <div class="selected-list" id="selected-cards-view">
+            <span style="color: #aaa; font-size: 13px;">እስካሁን ምንም አልተመረጠም</span>
+        </div>
+    </div>
 
     <script>
         Telegram.WebApp.ready();
         
+        // አዲስ ተጫዋች ከሆነ የ 10 ብር መነሻ መስጠት (ለሙከራ ያህል ዋሌቱን ከፍ ማድረግ ትችላለህ)
         if (!localStorage.getItem('vip_bingo_wallet')) {
             localStorage.setItem('vip_bingo_wallet', '10'); 
         }
 
         const grid = document.getElementById('cards-grid');
-        let selectedCards = [];
+        let selectedCards = []; 
 
+        // 1-200 ቁጥሮችን መፍጠር
         for (let i = 1; i <= 200; i++) {
             const btn = document.createElement('button');
             btn.className = 'card-btn';
@@ -44,13 +60,16 @@
             grid.appendChild(btn);
         }
 
+        // 🔄 ካርቴላ የመምረጥ፣ የመቀየር እና ዋጋ የማስላት ህግ
         function toggleCardSelection(num, buttonElement) {
             const index = selectedCards.indexOf(num);
             
             if (index > -1) {
+                // ከተደገመ መልሶ ያነሳዋል
                 selectedCards.splice(index, 1);
                 buttonElement.classList.remove('selected');
             } else {
+                // ማክሲመም 3 ገደብ
                 if (selectedCards.length >= 3) {
                     Telegram.WebApp.showAlert("በአንድ ጊዜ ከ 3 ካርቴላ በላይ መምረጥ አይችሉም!");
                     return;
@@ -59,16 +78,59 @@
                 buttonElement.classList.add('selected');
             }
 
+            updateSelectionUI();
+        }
+
+        // 📊 የጽሑፍ እና የታችኛውን ማሳያ ማሻሻያ ህግ
+        function updateSelectionUI() {
+            // የብዛት እና የብር ማሳያ
             document.getElementById('selected-count').innerText = `${selectedCards.length}/3`;
-            const startBtn = document.getElementById('start-game-btn');
-            if (selectedCards.length > 0) {
-                startBtn.style.display = 'block';
+            const totalBet = selectedCards.length * 10;
+            document.getElementById('bet-amount').innerText = totalBet;
+
+            // የታችኛው ፈጣን እይታ ማሳያ (Scroll ቢደረግም እንዲታይ)
+            const viewContainer = document.getElementById('selected-cards-view');
+            if (selectedCards.length === 0) {
+                viewContainer.innerHTML = '<span style="color: #aaa; font-size: 13px;">እስካሁን ምንም አልተመረጠም</span>';
             } else {
-                startBtn.style.display = 'none';
+                viewContainer.innerHTML = '';
+                selectedCards.forEach(num => {
+                    const badge = document.createElement('span');
+                    badge.className = 'selected-badge';
+                    badge.innerText = `#${num}`;
+                    viewContainer.appendChild(badge);
+                });
             }
         }
 
-        function goToGame() {
+        // ⏱️ የ 40 ሰከንድ ቆጣሪ ማስጀመር
+        let timeLeft = 40;
+        const countdown = setInterval(() => {
+            timeLeft--;
+            document.getElementById('countdown-timer').innerText = `ጨዋታው ለመጀመር፡ ${timeLeft} ሰከንድ`;
+            
+            if (timeLeft <= 0) {
+                clearInterval(countdown);
+                autoStartGame();
+            }
+        }, 1000);
+
+        // 🚀 ሰከንዱ ሲያልቅ አውቶማቲክ ወደ ጨዋታው ማስገቢያ ህግ
+        function autoStartGame() {
+            // ተጫዋቹ ምንም ካርቴላ ካልመረጠ በራሱ ጊዜ 1ኛዋን ካርቴላ ይመርጥለታል
+            if (selectedCards.length === 0) {
+                selectedCards.push(1);
+            }
+
+            // የዋሌት ብር ቅነሳ ስሌት (1 ካርቴላ = 10 ብር)
+            let currentWallet = parseFloat(localStorage.getItem('vip_bingo_wallet')) || 0;
+            let totalCost = selectedCards.length * 10;
+            
+            // የዋሌቱን ሂሳብ ቀናንሶ ማስቀመጥ
+            let updatedWallet = currentWallet - totalCost;
+            localStorage.setItem('vip_bingo_wallet', updatedWallet.toString());
+
+            // የመረጣቸውን ካርቴላዎች ወደ game.html ማስተላለፍ
             localStorage.setItem('selectedCardsList', JSON.stringify(selectedCards));
             window.location.href = 'game.html';
         }
