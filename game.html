@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>VIP BINGO - LIVE GAME</title>
-    <!-- የቴሌግራም ስም ለመለየት የሚጠቅመው ስክሪፕት -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         body {
@@ -41,9 +40,9 @@
 
     <div class="stats-grid">
         <div class="stat-box">GAME ID<div class="stat-val">VIP-102</div></div>
-        <div class="stat-box">PLAYERS<div class="stat-val" id="live-players">--</div></div>
-        <div class="stat-box">BET<div class="stat-val">2 ETB</div></div>
-        <div class="stat-box">DERASH<div class="stat-val" id="live-prize">--</div></div>
+        <div class="stat-box">PLAYERS<div class="stat-val" id="live-players">0</div></div>
+        <div class="stat-box">WALLET<div class="stat-val" id="my-wallet">100 ETB</div></div>
+        <div class="stat-box">DERASH<div class="stat-val" id="live-prize">0 ETB</div></div>
         <div class="stat-box">CALLED<div class="stat-val" id="called-count">0</div></div>
     </div>
 
@@ -72,18 +71,17 @@
             <h1 style="color: #00c853; margin: 0 0 10px 0; font-size: 36px;">BINGO! 🎉</h1>
             <p style="font-size: 16px; margin: 5px 0;">የአሸናፊነት አይነት፡ <span id="win-type" style="color: #ff5722; font-weight: bold;">-</span></p>
             <p style="font-size: 18px; margin: 5px 0;">አሸናፊ፡ <span id="winner-name" style="color: #ffc107; font-weight: bold;">-</span></p>
+            <p style="font-size: 16px; margin: 5px 0; color: #007bff;">አሸናፊ ካርዴላ፦ <span id="winner-card-num" style="font-weight: bold;">-</span></p>
             <table class="bingo-table" style="margin-top: 10px;"><tbody id="winner-card-body"></tbody></table>
             <p style="font-size: 12px; color: #ff9800; margin-top: 15px;" id="restart-timer">በ 10 ሰከንድ ውስጥ ወደ ካርድ ምርጫ ይመለሳል...</p>
         </div>
     </div>
 
     <script>
-        // 1. የቴሌግራም ስም መለያ (Telegram Name Detection)
         Telegram.WebApp.ready();
         let telegramUser = Telegram.WebApp.initDataUnsafe?.user;
         let playerDisplayName = telegramUser ? (telegramUser.first_name) : null;
 
-        // 2. የ 1-75 ሰሌዳ መፍጠሪያ
         const numbersGrid = document.getElementById('numbers-grid');
         for (let i = 1; i <= 75; i++) {
             const cell = document.createElement('div');
@@ -93,7 +91,6 @@
             numbersGrid.appendChild(cell);
         }
 
-        // 3. ከተመረጠው ካርድ ላይ ዳታውን መልሶ ማምጣት
         const savedCardNum = localStorage.getItem('selectedCardNum') || '1';
         const savedCardData = localStorage.getItem('selectedCardData');
         
@@ -104,21 +101,25 @@
             cartelBody.innerHTML = savedCardData;
         }
 
-        // የቴሌግራም ስም ከሌለ የካርድ ቁጥሩን ለአሸናፊነት ስምነት ማዘጋጀት
         if (!playerDisplayName) {
-            playerDisplayName = `ካርዴላ #${savedCardNum}`;
+            playerDisplayName = `ተጫዋች`;
         }
 
-        // 4. የተጫዋቾች ብዛት እና ደራሽ ማስላት (2 ብር ተቀናሽ አድርጎ)
-        let totalPlayers = Math.floor(Math.random() * (150 - 50 + 1)) + 50; 
-        let totalPrize = totalPlayers * 2; 
-        document.getElementById('live-players').innerText = totalPlayers;
-        document.getElementById('live-prize').innerText = totalPrize + " ETB";
+        // 💰 የዋሌት ማስተካከያ (ጨዋታው ሲጀመር 10 ብር ይቀንሳል)
+        let currentWallet = 100 - 10; 
+        document.getElementById('my-wallet').innerText = currentWallet + " ETB";
+
+        // 👥 የተጫዋቾች ብዛት እና የደራሽ ስሌት (በ 8 ብር ተባዝቶ)
+        let activePlayersCount = Math.floor(Math.random() * (120 - 40 + 1)) + 40; 
+        let currentPrizePool = activePlayersCount * 8; // ጠቅላላ ተጫዋቾች በ 8 ብር ሲባዙ
+        document.getElementById('live-players').innerText = activePlayersCount;
+        document.getElementById('live-prize').innerText = currentPrizePool + " ETB";
 
         let allNumbers = Array.from({length: 75}, (_, i) => i + 1);
         let calledNumbers = [];
         let currentActiveNum = null;
 
+        // ⏱️ እያንዳንዱ ቁጥር በ 3 ሰከንድ ልዩነት እንዲጠራ የተደረገ (3000ms)
         const callInterval = setInterval(() => {
             if (allNumbers.length === 0) { clearInterval(callInterval); return; }
             const randomIndex = Math.floor(Math.random() * allNumbers.length);
@@ -132,7 +133,7 @@
             document.getElementById(`board-num-${pickedNum}`).className = 'board-cell active-now';
             
             checkAndMatchCard(pickedNum);
-        }, 1500);
+        }, 3000);
 
         function checkAndMatchCard(num) {
             const cells = cartelBody.getElementsByTagName('td');
@@ -167,10 +168,15 @@
 
         function triggerBingoWin(winType) {
             clearInterval(callInterval);
+            
+            // 💸 አሸናፊው ሲያሸንፍ የደራሹ ገንዘብ በቀጥታ ዋሌቱ ላይ እንዲደመር ማድረጊያ
+            currentWallet = currentWallet + currentPrizePool;
+            document.getElementById('my-wallet').innerText = currentWallet + " ETB";
+
             document.getElementById('bingo-screen').style.display = 'flex';
             document.getElementById('win-type').innerText = winType;
-            // እዚህ ጋ የቴሌግራም ስም ወይም የካርድ ቁጥሩ ይቀመጣል
             document.getElementById('winner-name').innerText = playerDisplayName; 
+            document.getElementById('winner-card-num').innerText = `#${savedCardNum}`; 
             document.getElementById('winner-card-body').innerHTML = cartelBody.innerHTML;
             
             let returnTime = 10;
