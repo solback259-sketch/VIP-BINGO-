@@ -14,20 +14,8 @@
             padding: 10px;
             text-align: center;
         }
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 5px;
-            margin-bottom: 15px;
-        }
-        .stat-box {
-            background-color: #251f5c;
-            padding: 8px 2px;
-            border-radius: 8px;
-            font-size: 11px;
-            font-weight: bold;
-            border: 1px solid #3d3580;
-        }
+        .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; margin-bottom: 15px; }
+        .stat-box { background-color: #251f5c; padding: 8px 2px; border-radius: 8px; font-size: 11px; font-weight: bold; border: 1px solid #3d3580; }
         .stat-val { color: #ffc107; font-size: 13px; margin-top: 3px; }
         .game-layout { display: flex; gap: 10px; justify-content: center; align-items: flex-start; }
         .called-board { background-color: #251f5c; border-radius: 12px; padding: 8px; width: 45%; border: 1px solid #3d3580; }
@@ -62,7 +50,7 @@
         <div class="right-panel">
             <div class="big-ball-container"><div class="big-ball" id="current-ball">--</div></div>
             <div class="cartel-box">
-                <div style="font-size: 11px; color: #ff9800; margin-bottom: 5px; font-weight: bold;">CARTELA #38</div>
+                <div style="font-size: 11px; color: #ff9800; margin-bottom: 5px; font-weight: bold;" id="live-cartel-label">CARTELA #--</div>
                 <table class="bingo-table">
                     <tr>
                         <th class="bingo-th" style="background:#007bff;">B</th>
@@ -88,6 +76,7 @@
     </div>
 
     <script>
+        // የ 1-75 ሰሌዳ መፍጠሪያ
         const numbersGrid = document.getElementById('numbers-grid');
         for (let i = 1; i <= 75; i++) {
             const cell = document.createElement('div');
@@ -97,26 +86,17 @@
             numbersGrid.appendChild(cell);
         }
 
-        const myCardNumbers = [
-            [5, 20, 35, 50, 65],
-            [12, 22, 40, 55, 70],
-            [3, 18, '★', 48, 62],
-            [8, 25, 38, 52, 68],
-            [15, 30, 45, 60, 75]
-        ];
-
+        // 📥 ከተመረጠው ካርድ ላይ ዳታውን መልሶ ማምጣት
+        const savedCardNum = localStorage.getItem('selectedCardNum') || '38';
+        const savedCardData = localStorage.getItem('selectedCardData');
+        
+        document.getElementById('live-cartel-label').innerText = `CARTELA #${savedCardNum}`;
         const cartelBody = document.getElementById('cartel-body');
-        for (let r = 0; r < 5; r++) {
-            const tr = document.createElement('tr');
-            for (let c = 0; c < 5; c++) {
-                const td = document.createElement('td');
-                td.className = 'bingo-td';
-                td.id = `cell-${r}-${c}`;
-                td.innerText = myCardNumbers[r][c];
-                if (myCardNumbers[r][c] === '★') td.className = 'bingo-td star-cell';
-                tr.appendChild(td);
-            }
-            cartelBody.appendChild(tr);
+        
+        if(savedCardData) {
+            cartelBody.innerHTML = savedCardData;
+        } else {
+            cartelBody.innerHTML = `<tr><td class="bingo-td">5</td><td class="bingo-td">20</td><td class="bingo-td">35</td><td class="bingo-td">50</td><td class="bingo-td">65</td></tr>`;
         }
 
         let allNumbers = Array.from({length: 75}, (_, i) => i + 1);
@@ -134,21 +114,27 @@
             currentActiveNum = pickedNum;
             document.getElementById('current-ball').innerText = pickedNum;
             document.getElementById(`board-num-${pickedNum}`).className = 'board-cell active-now';
+            
             checkAndMatchCard(pickedNum);
         }, 1500);
 
         function checkAndMatchCard(num) {
-            for (let r = 0; r < 5; r++) {
-                for (let c = 0; c < 5; c++) {
-                    if (myCardNumbers[r][c] === num) document.getElementById(`cell-${r}-${c}`).classList.add('matched');
+            const cells = cartelBody.getElementsByTagName('td');
+            for (let cell of cells) {
+                if (parseInt(cell.innerText) === num) {
+                    cell.classList.add('matched');
                 }
             }
             checkWinConditions();
         }
 
         function isCellMarked(r, c) {
-            if (myCardNumbers[r][c] === '★') return true;
-            return document.getElementById(`cell-${r}-${c}`).classList.contains('matched');
+            const row = cartelBody.getElementsByTagName('tr')[r];
+            if(!row) return false;
+            const cell = row.getElementsByTagName('td')[c];
+            if(!cell) return false;
+            if (cell.innerText === '★') return true;
+            return cell.classList.contains('matched');
         }
 
         function checkWinConditions() {
