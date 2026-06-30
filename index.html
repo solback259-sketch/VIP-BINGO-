@@ -36,7 +36,7 @@
             display: grid;
             grid-template-columns: repeat(8, 1fr);
             gap: 6px;
-            max-height: 280px;
+            max-height: 250px;
             overflow-y: auto;
             border: 1px solid #3d3580;
             padding: 10px;
@@ -57,10 +57,10 @@
             background-color: #00c853 !important;
         }
         .cartel-container {
-            margin-top: 20px;
+            margin-top: 15px;
             background: #251f5c;
             border-radius: 12px;
-            padding: 15px;
+            padding: 12px;
             display: inline-block;
             width: 90%;
             max-width: 320px;
@@ -82,22 +82,8 @@
         .bingo-th:nth-child(3) { background-color: #e83e8c; }
         .bingo-th:nth-child(4) { background-color: #28a745; }
         .bingo-th:nth-child(5) { background-color: #fd7e14; }
-        .bingo-td { background-color: #ffffff; color: #333; font-weight: bold; padding: 10px 0; border-radius: 4px; }
+        .bingo-td { background-color: #ffffff; color: #333; font-weight: bold; padding: 10px 0; border-radius: 4px; font-size: 14px; }
         .star-cell { background-color: #00c853; color: white; }
-        .go-btn {
-            background-color: #ff9800;
-            color: #1a1540;
-            border: none;
-            padding: 12px 25px;
-            font-size: 16px;
-            font-weight: bold;
-            border-radius: 8px;
-            margin-top: 15px;
-            cursor: pointer;
-            display: none;
-            width: 90%;
-            max-width: 320px;
-        }
     </style>
 </head>
 <body>
@@ -105,12 +91,10 @@
     <div class="header-box">
         👑 VIP BINGO LOBBY
         <br>
-        <div class="timer-badge" id="countdown">40 s</div>
+        <div class="timer-badge" id="countdown">ካርድ ይምረጡ...</div>
     </div>
 
     <div class="grid-container" id="bingo-grid"></div>
-
-    <button class="go-btn" id="start-game-btn" onclick="goToGame()">ወደ ጨዋታው ግባ 🚀</button>
 
     <div class="cartel-container" id="cartel-panel" style="display: none;">
         <div class="cartel-title" id="cartel-label">CARTEL #--</div>
@@ -128,8 +112,12 @@
 
     <script>
         let mySelectedCard = null;
+        let timerStarted = false;
+        let timeLeft = 40;
+        let interval = null;
         const gridElement = document.getElementById('bingo-grid');
 
+        // 1-200 የካርድ ቁጥሮች መደርደሪያ
         for (let i = 1; i <= 200; i++) {
             const btn = document.createElement('button');
             btn.className = 'card-btn';
@@ -147,14 +135,41 @@
             document.getElementById(`card-${cardNum}`).classList.add('my-selection');
             document.getElementById('cartel-panel').style.display = 'inline-block';
             document.getElementById('cartel-label').innerText = `CARTEL #${cardNum}`;
+            
+            // የተስተካከለው B-I-N-G-O ማትሪክስ አመንጪ
             generateBingoMatrix();
+
+            // ⏱️ ካርድ ሲመረጥ ብቻ ሰዓት መቁጠር እንዲጀምር የማድረጊያ ሎጂክ
+            if (!timerStarted) {
+                timerStarted = true;
+                startLobbyTimer();
+            }
+        }
+
+        // 🔢 ትክክለኛው የቢንጎ የቁጥር ህግ ክልል
+        function getRandomFromRange(min, max) {
+            return Math.floor(Math.random() * (max - min + 1)) + min;
         }
 
         function generateBingoMatrix() {
             const tbody = document.getElementById('bingo-body');
             tbody.innerHTML = '';
+            
+            // ለየፊደላቱ 5 የራሳቸውን የቁጥር ክምችት ማዘጋጀት
+            let bNums = [], iNums = [], nNums = [], gNums = [], oNums = [];
+            while(bNums.length < 5) { let n = getRandomFromRange(1, 15); if(!bNums.includes(n)) bNums.push(n); }
+            while(iNums.length < 5) { let n = getRandomFromRange(1, 16); if(!iNums.includes(n)) iNums.push(n); }
+            while(nNums.length < 5) { let n = getRandomFromRange(31, 45); if(!nNums.includes(n)) nNums.push(n); }
+            while(gNums.length < 5) { let n = getRandomFromRange(46, 60); if(!gNums.includes(n)) gNums.push(n); }
+            while(oNums.length < 5) { let n = getRandomFromRange(61, 75); if(!oNums.includes(n)) oNums.push(n); }
+
+            // ማትሪክሱን አግድም መደርደር
             for (let row = 0; row < 5; row++) {
                 const tr = document.createElement('tr');
+                
+                // ኮለም 0 = B, 1 = I, 2 = N, 3 = G, 4 = O
+                const rowData = [bNums[row], iNums[row], nNums[row], gNums[row], oNums[row]];
+                
                 for (let col = 0; col < 5; col++) {
                     const td = document.createElement('td');
                     td.className = 'bingo-td';
@@ -162,7 +177,7 @@
                         td.innerText = '★';
                         td.classList.add('star-cell');
                     } else {
-                        td.innerText = Math.floor(Math.random() * 90) + 1;
+                        td.innerText = rowData[col];
                     }
                     tr.appendChild(td);
                 }
@@ -170,25 +185,20 @@
             }
         }
 
-        let timeLeft = 40;
-        const interval = setInterval(() => {
-            timeLeft--;
-            document.getElementById('countdown').innerText = timeLeft + ' s';
-            if (timeLeft <= 0) {
-                clearInterval(interval);
-                document.querySelectorAll('.card-btn').forEach(b => b.disabled = true);
-                if(mySelectedCard) {
-                    document.getElementById('start-game-btn').style.display = 'inline-block';
-                } else {
-                    alert("ካርድ አልመረጥክም! ገጹን አድሰህ ድጋሚ ምረጥ።");
+        function startLobbyTimer() {
+            interval = setInterval(() => {
+                timeLeft--;
+                document.getElementById('countdown').innerText = timeLeft + ' s';
+                if (timeLeft <= 0) {
+                    clearInterval(interval);
+                    // የመረጠውን ካርድ ቁጥር እና የካርዱን ይዘት ይዞ በቀጥታ ወደ ጨዋታው ይሄዳል
+                    const cardData = document.getElementById('bingo-body').innerHTML;
+                    localStorage.setItem('selectedCardNum', mySelectedCard);
+                    localStorage.setItem('selectedCardData', cardData);
+                    window.location.href = 'game.html';
                 }
-            }
-        }, 1000);
-
-        function goToGame() {
-            window.location.href = 'game.html';
+            }, 1000);
         }
     </script>
 </body>
 </html>
-  
