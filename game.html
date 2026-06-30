@@ -6,14 +6,7 @@
     <title>VIP BINGO - LIVE GAME</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #1a1540;
-            color: white;
-            margin: 0;
-            padding: 10px;
-            text-align: center;
-        }
+        body { font-family: 'Segoe UI', sans-serif; background-color: #1a1540; color: white; margin: 0; padding: 10px; text-align: center; }
         .stats-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; margin-bottom: 15px; }
         .stat-box { background-color: #251f5c; padding: 8px 1px; border-radius: 8px; font-size: 10px; font-weight: bold; border: 1px solid #3d3580; }
         .stat-val { color: #ffc107; font-size: 12px; margin-top: 3px; }
@@ -26,22 +19,22 @@
         .right-panel { width: 50%; display: flex; flex-direction: column; gap: 10px; align-items: center; }
         .big-ball-container { background-color: #251f5c; width: 100%; padding: 15px 0; border-radius: 12px; border: 1px solid #3d3580; }
         .big-ball { background: white; color: #251f5c; width: 65px; height: 65px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: bold; border: 4px solid #ffc107; margin: 0 auto; }
-        .cartel-box { background: #251f5c; border-radius: 12px; padding: 10px; width: 100%; border: 1px solid #3d3580; box-sizing: border-box; }
+        .cartel-box { background: #251f5c; border-radius: 12px; padding: 10px; width: 100%; border: 1px solid #3d3580; }
         .bingo-table { width: 100%; border-collapse: separate; border-spacing: 3px; }
         .bingo-th { font-size: 12px; padding: 5px 0; border-radius: 3px; }
         .bingo-td { background-color: #ffffff; color: #333; font-weight: bold; padding: 8px 0; border-radius: 3px; font-size: 12px; }
         .bingo-td.matched { background-color: #00c853 !important; color: white !important; }
         .star-cell { background-color: #00c853; color: white; }
         .bingo-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(26, 21, 64, 0.95); z-index: 999; justify-content: center; align-items: center; flex-direction: column; }
-        .announcement-box { background: #251f5c; padding: 20px; border-radius: 15px; border: 2px solid #ff9800; width: 85%; max-width: 320px; }
+        .announcement-box { background: #251f5c; padding: 20px; border-radius: 15px; border: 2px solid #ffc107; width: 85%; max-width: 320px; }
     </style>
 </head>
 <body>
 
     <div class="stats-grid">
         <div class="stat-box">GAME ID<div class="stat-val">VIP-102</div></div>
-        <div class="stat-box">PLAYERS<div class="stat-val" id="live-players">0</div></div>
-        <div class="stat-box">WALLET<div class="stat-val" id="my-wallet">100 ETB</div></div>
+        <div class="stat-box">PLAYERS<div class="stat-val" id="live-players">1</div></div>
+        <div class="stat-box">WALLET<div class="stat-val" id="my-wallet">-- ETB</div></div>
         <div class="stat-box">DERASH<div class="stat-val" id="live-prize">0 ETB</div></div>
         <div class="stat-box">CALLED<div class="stat-val" id="called-count">0</div></div>
     </div>
@@ -71,17 +64,22 @@
             <h1 style="color: #00c853; margin: 0 0 10px 0; font-size: 36px;">BINGO! 🎉</h1>
             <p style="font-size: 16px; margin: 5px 0;">የአሸናፊነት አይነት፡ <span id="win-type" style="color: #ff5722; font-weight: bold;">-</span></p>
             <p style="font-size: 18px; margin: 5px 0;">አሸናፊ፡ <span id="winner-name" style="color: #ffc107; font-weight: bold;">-</span></p>
-            <p style="font-size: 16px; margin: 5px 0; color: #007bff;">አሸናፊ ካርዴላ፦ <span id="winner-card-num" style="font-weight: bold;">-</span></p>
+            <p style="font-size: 16px; margin: 5px 0; color: #007bff;">አሸናፊ ካርተላ፦ <span id="winner-card-num" style="font-weight: bold;">-</span></p>
             <table class="bingo-table" style="margin-top: 10px;"><tbody id="winner-card-body"></tbody></table>
-            <p style="font-size: 12px; color: #ff9800; margin-top: 15px;" id="restart-timer">በ 10 ሰከንድ ውስጥ ወደ ካርድ ምርጫ ይመለሳል...</p>
+            <p style="font-size: 12px; color: #ffc107; margin-top: 15px; font-weight: bold;" id="restart-timer">በ 10 ሰከንድ ውስጥ ወደ ካርድ ምርጫ ይመለሳል...</p>
         </div>
     </div>
 
     <script>
+        // 🔗 የአንተ መገናኛ የሰርቨር ሊንክ
+        const SERVER_URL = "https://bdej.pythonanywhere.com";
+
         Telegram.WebApp.ready();
         let telegramUser = Telegram.WebApp.initDataUnsafe?.user;
-        let playerDisplayName = telegramUser ? (telegramUser.first_name) : null;
+        let myUserId = telegramUser ? telegramUser.id : "local_test_" + Math.floor(Math.random() * 1000);
+        let playerDisplayName = telegramUser ? telegramUser.first_name : "ተጫዋች";
 
+        // የ 1-75 ሰሌዳ መፍጠሪያ
         const numbersGrid = document.getElementById('numbers-grid');
         for (let i = 1; i <= 75; i++) {
             const cell = document.createElement('div');
@@ -93,33 +91,46 @@
 
         const savedCardNum = localStorage.getItem('selectedCardNum') || '1';
         const savedCardData = localStorage.getItem('selectedCardData');
-        
         document.getElementById('live-cartel-label').innerText = `CARTELA #${savedCardNum}`;
         const cartelBody = document.getElementById('cartel-body');
-        
-        if(savedCardData) {
-            cartelBody.innerHTML = savedCardData;
+        if(savedCardData) cartelBody.innerHTML = savedCardData;
+
+        // 📡 ከሰርቨር ጋር መገናኛ እና ተጫዋቾችን መመዝገቢያ ህግ
+        function connectToBackend() {
+            fetch(`${SERVER_URL}/api/join`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    user_id: myUserId,
+                    user_name: playerDisplayName,
+                    card_num: savedCardNum
+                })
+            })
+            .then(res => res.json())
+            .then(data => {
+                document.getElementById('my-wallet').innerText = data.wallet + " ETB";
+                document.getElementById('live-players').innerText = data.players_count;
+                document.getElementById('live-prize').innerText = data.derash + " ETB";
+            })
+            .catch(err => console.error("Server connection failed:", err));
         }
 
-        if (!playerDisplayName) {
-            playerDisplayName = `ተጫዋች`;
-        }
+        connectToBackend();
 
-        // 💰 የዋሌት ማስተካከያ (ጨዋታው ሲጀመር 10 ብር ይቀንሳል)
-        let currentWallet = 100 - 10; 
-        document.getElementById('my-wallet').innerText = currentWallet + " ETB";
-
-        // 👥 የተጫዋቾች ብዛት እና የደራሽ ስሌት (በ 8 ብር ተባዝቶ)
-        let activePlayersCount = Math.floor(Math.random() * (120 - 40 + 1)) + 40; 
-        let currentPrizePool = activePlayersCount * 8; // ጠቅላላ ተጫዋቾች በ 8 ብር ሲባዙ
-        document.getElementById('live-players').innerText = activePlayersCount;
-        document.getElementById('live-prize').innerText = currentPrizePool + " ETB";
+        // በየጊዜው የተጫዋች ቁጥርን ከሰርቨር ማደሻ (Live Tracking)
+        setInterval(() => {
+            fetch(`${SERVER_URL}/api/status`)
+            .then(res => res.json())
+            .then(data => {
+                document.getElementById('live-players').innerText = data.players_count;
+                document.getElementById('live-prize').innerText = data.derash + " ETB";
+            });
+        }, 4000);
 
         let allNumbers = Array.from({length: 75}, (_, i) => i + 1);
         let calledNumbers = [];
         let currentActiveNum = null;
 
-        // ⏱️ እያንዳንዱ ቁጥር በ 3 ሰከንድ ልዩነት እንዲጠራ የተደረገ (3000ms)
         const callInterval = setInterval(() => {
             if (allNumbers.length === 0) { clearInterval(callInterval); return; }
             const randomIndex = Math.floor(Math.random() * allNumbers.length);
@@ -138,9 +149,7 @@
         function checkAndMatchCard(num) {
             const cells = cartelBody.getElementsByTagName('td');
             for (let cell of cells) {
-                if (parseInt(cell.innerText) === num) {
-                    cell.classList.add('matched');
-                }
+                if (parseInt(cell.innerText) === num) cell.classList.add('matched');
             }
             checkWinConditions();
         }
@@ -168,10 +177,19 @@
 
         function triggerBingoWin(winType) {
             clearInterval(callInterval);
-            
-            // 💸 አሸናፊው ሲያሸንፍ የደራሹ ገንዘብ በቀጥታ ዋሌቱ ላይ እንዲደመር ማድረጊያ
-            currentWallet = currentWallet + currentPrizePool;
-            document.getElementById('my-wallet').innerText = currentWallet + " ETB";
+
+            // 📡 አሸናፊውን ወደ ሰርቨር መላክና ሙሉ የደራሹን ብር ዋሌት ላይ መደመር
+            fetch(`${SERVER_URL}/api/win`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ user_id: myUserId })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if(data.status === "won") {
+                    document.getElementById('my-wallet').innerText = data.updated_wallet + " ETB";
+                }
+            });
 
             document.getElementById('bingo-screen').style.display = 'flex';
             document.getElementById('win-type').innerText = winType;
@@ -185,10 +203,12 @@
                 document.getElementById('restart-timer').innerText = `በ ${returnTime} ሰከንድ ውስጥ ወደ ካርድ ምርጫ ይመለሳል...`;
                 if (returnTime <= 0) {
                     clearInterval(returnInterval);
-                    window.location.href = 'index.html'; 
+                    fetch(`${SERVER_URL}/api/restart`, { method: "POST" })
+                    .then(() => { window.location.href = 'index.html'; });
                 }
             }, 1000);
         }
     </script>
 </body>
-</html>
+    </html>
+    
