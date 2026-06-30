@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>VIP BINGO - LIVE GAME</title>
+    <!-- የቴሌግራም ስም ለመለየት የሚጠቅመው ስክሪፕት -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         body {
@@ -14,9 +15,9 @@
             padding: 10px;
             text-align: center;
         }
-        .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; margin-bottom: 15px; }
-        .stat-box { background-color: #251f5c; padding: 8px 2px; border-radius: 8px; font-size: 11px; font-weight: bold; border: 1px solid #3d3580; }
-        .stat-val { color: #ffc107; font-size: 13px; margin-top: 3px; }
+        .stats-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; margin-bottom: 15px; }
+        .stat-box { background-color: #251f5c; padding: 8px 1px; border-radius: 8px; font-size: 10px; font-weight: bold; border: 1px solid #3d3580; }
+        .stat-val { color: #ffc107; font-size: 12px; margin-top: 3px; }
         .game-layout { display: flex; gap: 10px; justify-content: center; align-items: flex-start; }
         .called-board { background-color: #251f5c; border-radius: 12px; padding: 8px; width: 45%; border: 1px solid #3d3580; }
         .board-column { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; }
@@ -39,9 +40,10 @@
 <body>
 
     <div class="stats-grid">
-        <div class="stat-box">GAME ID<div class="stat-val">VIP-999</div></div>
-        <div class="stat-box">PLAYERS<div class="stat-val">201</div></div>
-        <div class="stat-box">BET<div class="stat-val">10</div></div>
+        <div class="stat-box">GAME ID<div class="stat-val">VIP-102</div></div>
+        <div class="stat-box">PLAYERS<div class="stat-val" id="live-players">--</div></div>
+        <div class="stat-box">BET<div class="stat-val">2 ETB</div></div>
+        <div class="stat-box">DERASH<div class="stat-val" id="live-prize">--</div></div>
         <div class="stat-box">CALLED<div class="stat-val" id="called-count">0</div></div>
     </div>
 
@@ -69,14 +71,19 @@
         <div class="announcement-box">
             <h1 style="color: #00c853; margin: 0 0 10px 0; font-size: 36px;">BINGO! 🎉</h1>
             <p style="font-size: 16px; margin: 5px 0;">የአሸናፊነት አይነት፡ <span id="win-type" style="color: #ff5722; font-weight: bold;">-</span></p>
-            <p style="font-size: 18px; margin: 5px 0;">አሸናፊ፡ <span style="color: #ffc107; font-weight: bold;">ዮናስ</span></p>
+            <p style="font-size: 18px; margin: 5px 0;">አሸናፊ፡ <span id="winner-name" style="color: #ffc107; font-weight: bold;">-</span></p>
             <table class="bingo-table" style="margin-top: 10px;"><tbody id="winner-card-body"></tbody></table>
             <p style="font-size: 12px; color: #ff9800; margin-top: 15px;" id="restart-timer">በ 10 ሰከንድ ውስጥ ወደ ካርድ ምርጫ ይመለሳል...</p>
         </div>
     </div>
 
     <script>
-        // የ 1-75 ሰሌዳ መፍጠሪያ
+        // 1. የቴሌግራም ስም መለያ (Telegram Name Detection)
+        Telegram.WebApp.ready();
+        let telegramUser = Telegram.WebApp.initDataUnsafe?.user;
+        let playerDisplayName = telegramUser ? (telegramUser.first_name) : null;
+
+        // 2. የ 1-75 ሰሌዳ መፍጠሪያ
         const numbersGrid = document.getElementById('numbers-grid');
         for (let i = 1; i <= 75; i++) {
             const cell = document.createElement('div');
@@ -86,8 +93,8 @@
             numbersGrid.appendChild(cell);
         }
 
-        // 📥 ከተመረጠው ካርድ ላይ ዳታውን መልሶ ማምጣት
-        const savedCardNum = localStorage.getItem('selectedCardNum') || '38';
+        // 3. ከተመረጠው ካርድ ላይ ዳታውን መልሶ ማምጣት
+        const savedCardNum = localStorage.getItem('selectedCardNum') || '1';
         const savedCardData = localStorage.getItem('selectedCardData');
         
         document.getElementById('live-cartel-label').innerText = `CARTELA #${savedCardNum}`;
@@ -95,9 +102,18 @@
         
         if(savedCardData) {
             cartelBody.innerHTML = savedCardData;
-        } else {
-            cartelBody.innerHTML = `<tr><td class="bingo-td">5</td><td class="bingo-td">20</td><td class="bingo-td">35</td><td class="bingo-td">50</td><td class="bingo-td">65</td></tr>`;
         }
+
+        // የቴሌግራም ስም ከሌለ የካርድ ቁጥሩን ለአሸናፊነት ስምነት ማዘጋጀት
+        if (!playerDisplayName) {
+            playerDisplayName = `ካርዴላ #${savedCardNum}`;
+        }
+
+        // 4. የተጫዋቾች ብዛት እና ደራሽ ማስላት (2 ብር ተቀናሽ አድርጎ)
+        let totalPlayers = Math.floor(Math.random() * (150 - 50 + 1)) + 50; 
+        let totalPrize = totalPlayers * 2; 
+        document.getElementById('live-players').innerText = totalPlayers;
+        document.getElementById('live-prize').innerText = totalPrize + " ETB";
 
         let allNumbers = Array.from({length: 75}, (_, i) => i + 1);
         let calledNumbers = [];
@@ -153,7 +169,10 @@
             clearInterval(callInterval);
             document.getElementById('bingo-screen').style.display = 'flex';
             document.getElementById('win-type').innerText = winType;
+            // እዚህ ጋ የቴሌግራም ስም ወይም የካርድ ቁጥሩ ይቀመጣል
+            document.getElementById('winner-name').innerText = playerDisplayName; 
             document.getElementById('winner-card-body').innerHTML = cartelBody.innerHTML;
+            
             let returnTime = 10;
             const returnInterval = setInterval(() => {
                 returnTime--;
