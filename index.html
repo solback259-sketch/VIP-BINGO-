@@ -3,201 +3,74 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VIP BINGO</title>
+    <title>VIP BINGO - ምርጫ</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #1a1540;
-            color: white;
-            margin: 0;
-            padding: 10px;
-            text-align: center;
-        }
-        .header-box {
-            background-color: #251f5c;
-            padding: 10px;
-            border-radius: 8px;
-            margin-bottom: 15px;
-            font-size: 20px;
-            font-weight: bold;
-        }
-        .timer-badge {
-            background-color: #ffc107;
-            color: #1a1540;
-            padding: 5px 15px;
-            border-radius: 20px;
-            font-weight: bold;
-            display: inline-block;
-            margin-top: 5px;
-            font-size: 16px;
-        }
-        .grid-container {
-            display: grid;
-            grid-template-columns: repeat(8, 1fr);
-            gap: 6px;
-            max-height: 250px;
-            overflow-y: auto;
-            border: 1px solid #3d3580;
-            padding: 10px;
-            border-radius: 10px;
-            background: #251f5c;
-        }
-        .card-btn {
-            background-color: #3d3580;
-            border: none;
-            border-radius: 6px;
-            padding: 10px 0;
-            font-size: 14px;
-            font-weight: bold;
-            color: white;
-            cursor: pointer;
-        }
-        .card-btn.my-selection {
-            background-color: #00c853 !important;
-        }
-        .cartel-container {
-            margin-top: 15px;
-            background: #251f5c;
-            border-radius: 12px;
-            padding: 12px;
-            display: inline-block;
-            width: 90%;
-            max-width: 320px;
-            border: 1px solid #3d3580;
-        }
-        .cartel-title {
-            background: #ff9800;
-            color: #1a1540;
-            padding: 4px 15px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: bold;
-            display: inline-block;
-            margin-bottom: 10px;
-        }
-        .bingo-table { width: 100%; border-collapse: separate; border-spacing: 4px; }
-        .bingo-th { background-color: #007bff; color: white; font-weight: bold; padding: 8px 0; border-radius: 4px; }
-        .bingo-th:nth-child(2) { background-color: #6f42c1; }
-        .bingo-th:nth-child(3) { background-color: #e83e8c; }
-        .bingo-th:nth-child(4) { background-color: #28a745; }
-        .bingo-th:nth-child(5) { background-color: #fd7e14; }
-        .bingo-td { background-color: #ffffff; color: #333; font-weight: bold; padding: 10px 0; border-radius: 4px; font-size: 14px; }
-        .star-cell { background-color: #00c853; color: white; }
+        body { font-family: 'Segoe UI', sans-serif; background-color: #1a1540; color: white; text-align: center; margin: 0; padding: 15px; }
+        .welcome-box { background: #251f5c; padding: 10px; border-radius: 10px; margin-bottom: 15px; border: 1px solid #3d3580; }
+        .grid-container { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; max-height: 400px; overflow-y: auto; padding: 5px; background: #251f5c; border-radius: 12px; }
+        .card-btn { background-color: #3d3580; color: white; border: none; padding: 12px 0; font-size: 14px; font-weight: bold; border-radius: 6px; cursor: pointer; }
+        .card-btn.selected { background-color: #ff5722 !important; box-shadow: 0 0 8px #ff5722; }
+        .action-btn { background: linear-gradient(135deg, #00c853, #009624); color: white; border: none; width: 100%; padding: 15px; font-size: 18px; font-weight: bold; border-radius: 10px; margin-top: 15px; cursor: pointer; display: none; }
     </style>
 </head>
 <body>
 
-    <div class="header-box">
-        👑 VIP BINGO LOBBY
-        <br>
-        <div class="timer-badge" id="countdown">ካርድ ይምረጡ...</div>
+    <div class="welcome-box">
+        <h3 style="margin: 5px 0; color: #ffc107;">እንኳን ደህና መጡ! 🎁</h3>
+        <p style="margin: 5px 0; font-size: 12px;">ለአዲስ ተጫዋች 10 ብር ተሰጥቶዎታል። እስከ 3 ካርቴላ መምረጥ ይችላሉStack።</p>
+        <p style="margin: 5px 0; font-size: 13px; font-weight: bold; color: #00c853;">የተመረጡ፦ <span id="selected-count">0/3</span></p>
     </div>
 
-    <div class="grid-container" id="bingo-grid"></div>
+    <div class="grid-container" id="cards-grid"></div>
 
-    <div class="cartel-container" id="cartel-panel" style="display: none;">
-        <div class="cartel-title" id="cartel-label">CARTEL #--</div>
-        <table class="bingo-table">
-            <tr>
-                <th class="bingo-th">B</th>
-                <th class="bingo-th">I</th>
-                <th class="bingo-th">N</th>
-                <th class="bingo-th">G</th>
-                <th class="bingo-th">O</th>
-            </tr>
-            <tbody id="bingo-body"></tbody>
-        </table>
-    </div>
+    <button class="action-btn" id="start-game-btn" onclick="goToGame()">ወደ ጨዋታው ግባ (BET 10 ETB)</button>
 
     <script>
-        let mySelectedCard = null;
-        let timerStarted = false;
-        let timeLeft = 40;
-        let interval = null;
-        const gridElement = document.getElementById('bingo-grid');
+        Telegram.WebApp.ready();
+        
+        if (!localStorage.getItem('vip_bingo_wallet')) {
+            localStorage.setItem('vip_bingo_wallet', '10'); 
+        }
 
-        // 1-200 የካርድ ቁጥሮች መደርደሪያ
+        const grid = document.getElementById('cards-grid');
+        let selectedCards = [];
+
         for (let i = 1; i <= 200; i++) {
             const btn = document.createElement('button');
             btn.className = 'card-btn';
             btn.innerText = i;
-            btn.id = `card-${i}`;
-            btn.addEventListener('click', () => selectThisCard(i));
-            gridElement.appendChild(btn);
+            btn.onclick = () => toggleCardSelection(i, btn);
+            grid.appendChild(btn);
         }
 
-        function selectThisCard(cardNum) {
-            if (mySelectedCard) {
-                document.getElementById(`card-${mySelectedCard}`).classList.remove('my-selection');
-            }
-            mySelectedCard = cardNum;
-            document.getElementById(`card-${cardNum}`).classList.add('my-selection');
-            document.getElementById('cartel-panel').style.display = 'inline-block';
-            document.getElementById('cartel-label').innerText = `CARTEL #${cardNum}`;
+        function toggleCardSelection(num, buttonElement) {
+            const index = selectedCards.indexOf(num);
             
-            // የተስተካከለው B-I-N-G-O ማትሪክስ አመንጪ
-            generateBingoMatrix();
+            if (index > -1) {
+                selectedCards.splice(index, 1);
+                buttonElement.classList.remove('selected');
+            } else {
+                if (selectedCards.length >= 3) {
+                    Telegram.WebApp.showAlert("በአንድ ጊዜ ከ 3 ካርቴላ በላይ መምረጥ አይችሉም!");
+                    return;
+                }
+                selectedCards.push(num);
+                buttonElement.classList.add('selected');
+            }
 
-            // ⏱️ ካርድ ሲመረጥ ብቻ ሰዓት መቁጠር እንዲጀምር የማድረጊያ ሎጂክ
-            if (!timerStarted) {
-                timerStarted = true;
-                startLobbyTimer();
+            document.getElementById('selected-count').innerText = `${selectedCards.length}/3`;
+            const startBtn = document.getElementById('start-game-btn');
+            if (selectedCards.length > 0) {
+                startBtn.style.display = 'block';
+            } else {
+                startBtn.style.display = 'none';
             }
         }
 
-        // 🔢 ትክክለኛው የቢንጎ የቁጥር ህግ ክልል
-        function getRandomFromRange(min, max) {
-            return Math.floor(Math.random() * (max - min + 1)) + min;
-        }
-
-        function generateBingoMatrix() {
-            const tbody = document.getElementById('bingo-body');
-            tbody.innerHTML = '';
-            
-            // ለየፊደላቱ 5 የራሳቸውን የቁጥር ክምችት ማዘጋጀት
-            let bNums = [], iNums = [], nNums = [], gNums = [], oNums = [];
-            while(bNums.length < 5) { let n = getRandomFromRange(1, 15); if(!bNums.includes(n)) bNums.push(n); }
-            while(iNums.length < 5) { let n = getRandomFromRange(1, 16); if(!iNums.includes(n)) iNums.push(n); }
-            while(nNums.length < 5) { let n = getRandomFromRange(31, 45); if(!nNums.includes(n)) nNums.push(n); }
-            while(gNums.length < 5) { let n = getRandomFromRange(46, 60); if(!gNums.includes(n)) gNums.push(n); }
-            while(oNums.length < 5) { let n = getRandomFromRange(61, 75); if(!oNums.includes(n)) oNums.push(n); }
-
-            // ማትሪክሱን አግድም መደርደር
-            for (let row = 0; row < 5; row++) {
-                const tr = document.createElement('tr');
-                
-                // ኮለም 0 = B, 1 = I, 2 = N, 3 = G, 4 = O
-                const rowData = [bNums[row], iNums[row], nNums[row], gNums[row], oNums[row]];
-                
-                for (let col = 0; col < 5; col++) {
-                    const td = document.createElement('td');
-                    td.className = 'bingo-td';
-                    if (row === 2 && col === 2) {
-                        td.innerText = '★';
-                        td.classList.add('star-cell');
-                    } else {
-                        td.innerText = rowData[col];
-                    }
-                    tr.appendChild(td);
-                }
-                tbody.appendChild(tr);
-            }
-        }
-
-        function startLobbyTimer() {
-            interval = setInterval(() => {
-                timeLeft--;
-                document.getElementById('countdown').innerText = timeLeft + ' s';
-                if (timeLeft <= 0) {
-                    clearInterval(interval);
-                    // የመረጠውን ካርድ ቁጥር እና የካርዱን ይዘት ይዞ በቀጥታ ወደ ጨዋታው ይሄዳል
-                    const cardData = document.getElementById('bingo-body').innerHTML;
-                    localStorage.setItem('selectedCardNum', mySelectedCard);
-                    localStorage.setItem('selectedCardData', cardData);
-                    window.location.href = 'game.html';
-                }
-            }, 1000);
+        function goToGame() {
+            localStorage.setItem('selectedCardsList', JSON.stringify(selectedCards));
+            window.location.href = 'game.html';
         }
     </script>
 </body>
