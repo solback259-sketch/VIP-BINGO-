@@ -19,12 +19,15 @@
         .right-panel { width: 50%; display: flex; flex-direction: column; gap: 10px; align-items: center; }
         .big-ball-container { background-color: #251f5c; width: 100%; padding: 15px 0; border-radius: 12px; border: 1px solid #3d3580; }
         .big-ball { background: white; color: #251f5c; width: 65px; height: 65px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: bold; border: 4px solid #ffc107; margin: 0 auto; }
-        .cartel-box { background: #251f5c; border-radius: 12px; padding: 10px; width: 100%; border: 1px solid #3d3580; }
+        .cartel-box { background: #251f5c; border-radius: 12px; padding: 10px; width: 100%; border: 1px solid #3d3580; box-sizing: border-box; }
         .bingo-table { width: 100%; border-collapse: separate; border-spacing: 3px; }
-        .bingo-th { font-size: 12px; padding: 5px 0; border-radius: 3px; }
+        .bingo-th { font-size: 12px; padding: 5px 0; border-radius: 3px; position: relative; }
+        
+        /* 📍 የካርቴላ ቁጥር በ 5ኛው ፊደል (O) ላይ እንዲሆን ማድረጊያ ስታይል */
+        .cartela-label-top { position: absolute; top: -16px; left: 50%; transform: translateX(-50%); font-size: 9px; color: #ff9800; font-weight: bold; white-space: nowrap; }
+        
         .bingo-td { background-color: #ffffff; color: #333; font-weight: bold; padding: 8px 0; border-radius: 3px; font-size: 12px; }
         .bingo-td.matched { background-color: #00c853 !important; color: white !important; }
-        .star-cell { background-color: #00c853; color: white; }
         .bingo-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(26, 21, 64, 0.95); z-index: 999; justify-content: center; align-items: center; flex-direction: column; }
         .announcement-box { background: #251f5c; padding: 20px; border-radius: 15px; border: 2px solid #ffc107; width: 85%; max-width: 320px; }
     </style>
@@ -43,19 +46,7 @@
         <div class="called-board"><div class="board-column" id="numbers-grid"></div></div>
         <div class="right-panel">
             <div class="big-ball-container"><div class="big-ball" id="current-ball">--</div></div>
-            <div class="cartel-box">
-                <div style="font-size: 11px; color: #ff9800; margin-bottom: 5px; font-weight: bold;" id="live-cartel-label">CARTELA #--</div>
-                <table class="bingo-table">
-                    <tr>
-                        <th class="bingo-th" style="background:#007bff;">B</th>
-                        <th class="bingo-th" style="background:#6f42c1;">I</th>
-                        <th class="bingo-th" style="background:#e83e8c;">N</th>
-                        <th class="bingo-th" style="background:#28a745;">G</th>
-                        <th class="bingo-th" style="background:#fd7e14;">O</th>
-                    </tr>
-                    <tbody id="cartel-body"></tbody>
-                </table>
-            </div>
+            <div id="all-my-cartelas-container" style="width: 100%; display: flex; flex-direction: column; gap: 15px;"></div>
         </div>
     </div>
 
@@ -64,14 +55,12 @@
             <h1 style="color: #00c853; margin: 0 0 10px 0; font-size: 36px;">BINGO! 🎉</h1>
             <p style="font-size: 16px; margin: 5px 0;">የአሸናፊነት አይነት፡ <span id="win-type" style="color: #ff5722; font-weight: bold;">-</span></p>
             <p style="font-size: 18px; margin: 5px 0;">አሸናፊ፡ <span id="winner-name" style="color: #ffc107; font-weight: bold;">-</span></p>
-            <p style="font-size: 16px; margin: 5px 0; color: #007bff;">አሸናፊ ካርተላ፦ <span id="winner-card-num" style="font-weight: bold;">-</span></p>
-            <table class="bingo-table" style="margin-top: 10px;"><tbody id="winner-card-body"></tbody></table>
+            <p style="font-size: 16px; margin: 5px 0; color: #007bff;">አሸናፊ ካርቴላ፦ <span id="winner-card-num" style="font-weight: bold;">-</span></p>
             <p style="font-size: 12px; color: #ffc107; margin-top: 15px; font-weight: bold;" id="restart-timer">በ 10 ሰከንድ ውስጥ ወደ ካርድ ምርጫ ይመለሳል...</p>
         </div>
     </div>
 
     <script>
-        // 🔗 የአንተ መገናኛ የሰርቨር ሊንክ
         const SERVER_URL = "https://bdej.pythonanywhere.com";
 
         Telegram.WebApp.ready();
@@ -79,7 +68,6 @@
         let myUserId = telegramUser ? telegramUser.id : "local_test_" + Math.floor(Math.random() * 1000);
         let playerDisplayName = telegramUser ? telegramUser.first_name : "ተጫዋች";
 
-        // የ 1-75 ሰሌዳ መፍጠሪያ
         const numbersGrid = document.getElementById('numbers-grid');
         for (let i = 1; i <= 75; i++) {
             const cell = document.createElement('div');
@@ -89,13 +77,54 @@
             numbersGrid.appendChild(cell);
         }
 
-        const savedCardNum = localStorage.getItem('selectedCardNum') || '1';
-        const savedCardData = localStorage.getItem('selectedCardData');
-        document.getElementById('live-cartel-label').innerText = `CARTELA #${savedCardNum}`;
-        const cartelBody = document.getElementById('cartel-body');
-        if(savedCardData) cartelBody.innerHTML = savedCardData;
+        let selectedCards = JSON.parse(localStorage.getItem('selectedCardsList')) || [1];
+        const cartelasContainer = document.getElementById('all-my-cartelas-container');
 
-        // 📡 ከሰርቨር ጋር መገናኛ እና ተጫዋቾችን መመዝገቢያ ህግ
+        selectedCards.forEach((cardNum, idx) => {
+            let mockMatrix = generateMockMatrixForCard(cardNum);
+            
+            let cartelBox = document.createElement('div');
+            cartelBox.className = 'cartel-box';
+            
+            let tableHTML = `
+                <table class="bingo-table" id="table-card-${cardNum}">
+                    <tr>
+                        <th class="bingo-th" style="background:#007bff;">B</th>
+                        <th class="bingo-th" style="background:#6f42c1;">I</th>
+                        <th class="bingo-th" style="background:#e83e8c;">N</th>
+                        <th class="bingo-th" style="background:#28a745;">G</th>
+                        <th class="bingo-th" style="background:#fd7e14;">O <div class="cartela-label-top">CARTELA #${cardNum}</div></th>
+                    </tr>
+            `;
+            
+            for(let r=0; r<5; r++) {
+                tableHTML += `<tr>`;
+                for(let c=0; c<5; c++) {
+                    let val = mockMatrix[r][c];
+                    if(r===2 && c===2) {
+                        tableHTML += `<td class="bingo-td matched" style="background-color:#00c853; color:white;">★</td>`;
+                    } else {
+                        tableHTML += `<td class="bingo-td">${val}</td>`;
+                    }
+                }
+                tableHTML += `</tr>`;
+            }
+            tableHTML += `</table>`;
+            cartelBox.innerHTML = tableHTML;
+            cartelasContainer.appendChild(cartelBox);
+        });
+
+        function generateMockMatrixForCard(seed) {
+            let matrix = [];
+            for(let r=0; r<5; r++){
+                matrix[r] = [];
+                for(let c=0; c<5; c++){
+                    matrix[r][c] = Math.floor(Math.random() * 15) + 1 + (c * 15);
+                }
+            }
+            return matrix;
+        }
+
         function connectToBackend() {
             fetch(`${SERVER_URL}/api/join`, {
                 method: "POST",
@@ -103,7 +132,7 @@
                 body: JSON.stringify({
                     user_id: myUserId,
                     user_name: playerDisplayName,
-                    card_num: savedCardNum
+                    card_num: selectedCards.join(", ")
                 })
             })
             .then(res => res.json())
@@ -111,74 +140,62 @@
                 document.getElementById('my-wallet').innerText = data.wallet + " ETB";
                 document.getElementById('live-players').innerText = data.players_count;
                 document.getElementById('live-prize').innerText = data.derash + " ETB";
-            })
-            .catch(err => console.error("Server connection failed:", err));
+            });
         }
 
         connectToBackend();
 
-        // በየጊዜው የተጫዋች ቁጥርን ከሰርቨር ማደሻ (Live Tracking)
-        setInterval(() => {
-            fetch(`${SERVER_URL}/api/status`)
-            .then(res => res.json())
-            .then(data => {
-                document.getElementById('live-players').innerText = data.players_count;
-                document.getElementById('live-prize').innerText = data.derash + " ETB";
-            });
-        }, 4000);
-
         let allNumbers = Array.from({length: 75}, (_, i) => i + 1);
-        let calledNumbers = [];
         let currentActiveNum = null;
 
         const callInterval = setInterval(() => {
             if (allNumbers.length === 0) { clearInterval(callInterval); return; }
             const randomIndex = Math.floor(Math.random() * allNumbers.length);
             const pickedNum = allNumbers.splice(randomIndex, 1)[0];
-            calledNumbers.push(pickedNum);
-            document.getElementById('called-count').innerText = calledNumbers.length;
+            document.getElementById('called-count').innerText = 75 - allNumbers.length;
 
             if (currentActiveNum) document.getElementById(`board-num-${currentActiveNum}`).className = 'board-cell active-past';
             currentActiveNum = pickedNum;
             document.getElementById('current-ball').innerText = pickedNum;
             document.getElementById(`board-num-${pickedNum}`).className = 'board-cell active-now';
             
-            checkAndMatchCard(pickedNum);
+            checkAndMatchAllCards(pickedNum);
         }, 3000);
 
-        function checkAndMatchCard(num) {
-            const cells = cartelBody.getElementsByTagName('td');
-            for (let cell of cells) {
-                if (parseInt(cell.innerText) === num) cell.classList.add('matched');
-            }
-            checkWinConditions();
+        function checkAndMatchAllCards(num) {
+            selectedCards.forEach(cardNum => {
+                const table = document.getElementById(`table-card-${cardNum}`);
+                const cells = table.getElementsByTagName('td');
+                for (let cell of cells) {
+                    if (parseInt(cell.innerText) === num) {
+                        cell.classList.add('matched');
+                    }
+                }
+                checkWinConditionsForTable(table, cardNum);
+            });
         }
 
-        function isCellMarked(r, c) {
-            const row = cartelBody.getElementsByTagName('tr')[r];
-            if(!row) return false;
-            const cell = row.getElementsByTagName('td')[c];
-            if(!cell) return false;
-            if (cell.innerText === '★') return true;
-            return cell.classList.contains('matched');
+        function checkWinConditionsForTable(table, cardNum) {
+            function isMarked(r, c) {
+                const row = table.getElementsByTagName('tr')[r+1]; 
+                const cell = row.getElementsByTagName('td')[c];
+                return cell.classList.contains('matched') || cell.innerText === '★';
+            }
+
+            let won = false;
+            let type = "";
+
+            for (let r = 0; r < 5; r++) { if (isMarked(r,0) && isMarked(r,1) && isMarked(r,2) && isMarked(r,3) && isMarked(r,4)) { won = true; type = "Horizontal (አግድም)"; } }
+            for (let c = 0; c < 5; c++) { if (isMarked(0,c) && isMarked(1,c) && isMarked(2,c) && isMarked(3,c) && isMarked(4,c)) { won = true; type = "Vertical (ወደታች)"; } }
+            if (isMarked(0,0) && isMarked(1,1) && isMarked(2,2) && isMarked(3,3) && isMarked(4,4)) { won = true; type = "Diagonal (ሰያፍ)"; }
+            if (isMarked(0,4) && isMarked(1,3) && isMarked(2,2) && isMarked(3,1) && isMarked(4,0)) { won = true; type = "Diagonal (ሰያፍ)"; }
+
+            if(won) triggerBingoWin(type, cardNum);
         }
 
-        function checkWinConditions() {
-            for (let r = 0; r < 5; r++) {
-                if (isCellMarked(r,0) && isCellMarked(r,1) && isCellMarked(r,2) && isCellMarked(r,3) && isCellMarked(r,4)) { triggerBingoWin("Horizontal (አግድም)"); return; }
-            }
-            for (let c = 0; c < 5; c++) {
-                if (isCellMarked(0,c) && isCellMarked(1,c) && isCellMarked(2,c) && isCellMarked(3,c) && isCellMarked(4,c)) { triggerBingoWin("Vertical (ወደታች)"); return; }
-            }
-            if (isCellMarked(0,0) && isCellMarked(1,1) && isCellMarked(2,2) && isCellMarked(3,3) && isCellMarked(4,4)) { triggerBingoWin("Diagonal (ሰያፍ)"); return; }
-            if (isCellMarked(0,4) && isCellMarked(1,3) && isCellMarked(2,2) && isCellMarked(3,1) && isCellMarked(4,0)) { triggerBingoWin("Diagonal (ሰያፍ)"); return; }
-            if (isCellMarked(0,0) && isCellMarked(0,4) && isCellMarked(4,0) && isCellMarked(4,4)) { triggerBingoWin("4 Corners (ማዕዘናት)"); return; }
-        }
-
-        function triggerBingoWin(winType) {
+        function triggerBingoWin(winType, winningCard) {
             clearInterval(callInterval);
 
-            // 📡 አሸናፊውን ወደ ሰርቨር መላክና ሙሉ የደራሹን ብር ዋሌት ላይ መደመር
             fetch(`${SERVER_URL}/api/win`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -194,8 +211,7 @@
             document.getElementById('bingo-screen').style.display = 'flex';
             document.getElementById('win-type').innerText = winType;
             document.getElementById('winner-name').innerText = playerDisplayName; 
-            document.getElementById('winner-card-num').innerText = `#${savedCardNum}`; 
-            document.getElementById('winner-card-body').innerHTML = cartelBody.innerHTML;
+            document.getElementById('winner-card-num').innerText = `#${winningCard}`; 
             
             let returnTime = 10;
             const returnInterval = setInterval(() => {
