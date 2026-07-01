@@ -7,58 +7,87 @@
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         body { font-family: 'Segoe UI', sans-serif; background-color: #1a1540; color: white; text-align: center; margin: 0; padding: 15px; }
-        .grid-container { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; max-height: 260px; overflow-y: auto; padding: 5px; background: #251f5c; border-radius: 12px; }
+        .welcome-box { background: #251f5c; padding: 10px; border-radius: 10px; margin-bottom: 15px; border: 1px solid #3d3580; }
+        .timer-box { font-size: 16px; font-weight: bold; color: white; background: #3d3580; padding: 10px; border-radius: 8px; margin-bottom: 15px; }
+        .timer-box.counting { background: #ff5722; box-shadow: 0 0 10px #ff5722; }
+        .grid-container { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; max-height: 280px; overflow-y: auto; padding: 5px; background: #251f5c; border-radius: 12px; }
         .card-btn { background-color: #3d3580; color: white; border: none; padding: 12px 0; font-size: 14px; font-weight: bold; border-radius: 6px; cursor: pointer; }
-        
-        /* 🎨 የቀለም ህጎች */
         .card-btn.selected { background-color: #ff5722 !important; box-shadow: 0 0 8px #ff5722; }
-        .card-btn.taken { background-color: #555 !important; color: #aaa; cursor: not-allowed; }
-        
-        .timer-box { font-size: 18px; font-weight: bold; color: white; background: #555; padding: 8px; border-radius: 8px; margin-bottom: 10px; }
-        .timer-box.counting { background: #ff5722; }
-        .mini-card { background: rgba(0,0,0,0.2); border: 1px solid #00c853; padding: 8px; margin-top: 8px; border-radius: 6px; }
+        .card-btn.taken { background-color: #555 !important; color: #aaa; cursor: not-allowed; opacity: 0.6; }
+        .summary-box { background: #251f5c; padding: 10px; border-radius: 10px; border: 1px solid #ffc107; margin-top: 15px; text-align: left; }
+        .mini-card { background: rgba(0,0,0,0.2); border: 1px solid #00c853; padding: 6px; margin-top: 5px; border-radius: 6px; font-size: 12px; }
     </style>
 </head>
 <body>
 
     <div class="welcome-box">
-        <div class="timer-box" id="countdown-timer">ለመቁጠር ቢያንስ 2 ካርቴላ ይምረጡ</div>
+        <div class="timer-box" id="countdown-timer">ጨዋታው ለመጀመር ቢያንስ 2 ካርቴላ መመረጥ አለበት...</div>
+        <p style="margin: 5px 0; font-size: 12px; color: #00c853;">የተመረጡ፦ <span id="selected-count">0/3</span> | ሂሳብ፦ <span id="bet-amount">0</span> ETB</p>
     </div>
 
     <div class="grid-container" id="cards-grid"></div>
+
+    <div class="summary-box">
+        <span style="font-size: 13px; font-weight: bold; color: #ffc107;">የመረጧቸው ካርቴላዎች የውስጥ ቁጥሮች፦</span>
+        <div id="selected-cards-view">
+            <p style="color: #aaa; font-size: 12px; margin: 5px 0;">እስካሁን አልተመረጠም</p>
+        </div>
+    </div>
 
     <script>
         Telegram.WebApp.ready();
         const SERVER_URL = "https://bdej.pythonanywhere.com";
         let selectedCards = [];
-        
-        // 1. ሌሎች የያዟቸውን ካርቴላዎች ከServer ማምጣት
-        function fetchTakenCards() {
-            fetch(`${SERVER_URL}/api/taken_cards`)
+        let globalTimerStarted = false;
+        let countdownInterval = null;
+
+        // 1. መጀመሪያ ግሪዱን በነጻ ሁኔታ መሳል (ፎቶው ላይ እንዳለው ባዶ እንዳይሆን)
+        const grid = document.getElementById('cards-grid');
+        for (let i = 1; i <= 200; i++) {
+            const btn = document.createElement('button');
+            btn.className = 'card-btn';
+            btn.innerText = i;
+            btn.id = `card-btn-${i}`;
+            btn.onclick = () => toggleSelection(i, btn);
+            grid.appendChild(btn);
+        }
+
+        // 2. ከሰርቨር ላይ በየሴኮንዱ የተያዙ ካርቴላዎችን እና የቆጣሪ ሁኔታን በ-Live ማምጣት (Long polling)
+        function updateStatusFromServer() {
+            fetch(`${SERVER_URL}/api/taken_cards?user_id=${Telegram.WebApp.initDataUnsafe?.user?.id || 'test'}`)
             .then(res => res.json())
             .then(data => {
-                renderGrid(data.taken_list);
-            });
-        }
-
-        // 2. ሰሌዳውን መሳል (በተያዘ እና በነጻ ሁኔታ)
-        function renderGrid(takenList) {
-            const grid = document.getElementById('cards-grid');
-            grid.innerHTML = '';
-            for (let i = 1; i <= 200; i++) {
-                const btn = document.createElement('button');
-                btn.className = 'card-btn';
-                btn.innerText = i;
-
-                if (takenList.includes(i)) {
-                    btn.classList.add('taken');
-                    btn.disabled = true; // ሌሎች የያዟቸውን እንዳይነካ
-                } else {
-                    btn.onclick = () => toggleSelection(i, btn);
+                // ሌሎች የያዟቸውን ቀለማቸውን መለወጥ
+                for (let i = 1; i <= 200; i++) {
+                    const btn = document.getElementById(`card-btn-${i}`);
+                    if (data.taken_list.includes(i) && !selectedCards.includes(i)) {
+                        btn.className = 'card-btn taken';
+                        btn.disabled = true;
+                    } else if (!selectedCards.includes(i)) {
+                        btn.className = 'card-btn';
+                        btn.disabled = false;
+                    }
                 }
-                grid.appendChild(btn);
-            }
+
+                // በጠቅላላው በሲስተሙ ውስጥ 2 ካርቴላ ከተመረጠ ቆጣሪው ይጀምራል
+                if (data.total_global_selected >= 2) {
+                    if (!globalTimerStarted) {
+                        globalTimerStarted = true;
+                        startLocalCountdown(data.time_left || 40);
+                    }
+                } else {
+                    // ከ 2 በታች ከሆነ ቆጣሪው ይቆማል
+                    globalTimerStarted = false;
+                    clearInterval(countdownInterval);
+                    document.getElementById('countdown-timer').className = 'timer-box';
+                    document.getElementById('countdown-timer').innerText = "ጨዋታው ለመጀመር ቢያንስ 2 ካርቴላ መመረጥ አለበት...";
+                }
+            })
+            .catch(err => console.log("Server sync error, retrying..."));
         }
+
+        // በየ 2 ሰከንዱ ከሰርቨር ጋር መረጃ መለዋወጥ
+        setInterval(updateStatusFromServer, 2000);
 
         function toggleSelection(num, btn) {
             if (selectedCards.includes(num)) {
@@ -69,30 +98,61 @@
                 selectedCards.push(num);
                 btn.classList.add('selected');
             }
-            checkTimer();
+            
+            // ሰርቨሩ እንዲያውቀው ወዲያውኑ መረጃ መላክ
+            fetch(`${SERVER_URL}/api/select_card`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ card_num: num, user_id: Telegram.WebApp.initDataUnsafe?.user?.id || 'test' })
+            });
+
+            updateUI();
         }
 
-        // ⏱️ የቆጣሪ ህግ (2 ካርቴላ ሲሆን ይጀምራል)
-        let timerStarted = false;
-        function checkTimer() {
-            if (selectedCards.length >= 2 && !timerStarted) {
-                timerStarted = true;
-                let timeLeft = 40;
-                document.getElementById('countdown-timer').className = 'timer-box counting';
-                const interval = setInterval(() => {
-                    timeLeft--;
-                    document.getElementById('countdown-timer').innerText = `ጨዋታው ለመጀመር፡ ${timeLeft} ሰከንድ`;
-                    if(timeLeft <= 0) { clearInterval(interval); startGame(); }
-                }, 1000);
+        function updateUI() {
+            document.getElementById('selected-count').innerText = `${selectedCards.length}/3`;
+            document.getElementById('bet-amount').innerText = selectedCards.length * 10;
+            
+            const viewContainer = document.getElementById('selected-cards-view');
+            if (selectedCards.length === 0) {
+                viewContainer.innerHTML = '<p style="color: #aaa; font-size: 12px; margin: 5px 0;">እስካሁን አልተመረጠም</p>';
+            } else {
+                viewContainer.innerHTML = '';
+                selectedCards.forEach(num => {
+                    const cardDiv = document.createElement('div');
+                    cardDiv.className = 'mini-card';
+                    cardDiv.innerText = `🗂️ ካርቴላ #${num} (ውስጥ ቁጥሮች በጨዋታው ገጽ ይዘጋጃሉ)`;
+                    viewContainer.appendChild(cardDiv);
+                });
             }
         }
 
-        function startGame() {
+        function startLocalCountdown(seconds) {
+            let timeLeft = seconds;
+            const timerEl = document.getElementById('countdown-timer');
+            timerEl.className = 'timer-box counting';
+            
+            clearInterval(countdownInterval);
+            countdownInterval = setInterval(() => {
+                timeLeft--;
+                timerEl.innerText = `ጨዋታው ለመጀመር፦ ${timeLeft} ሰከንድ`;
+                if (timeLeft <= 0) {
+                    clearInterval(countdownInterval);
+                    goToGamePage();
+                }
+            }, 1000);
+        }
+
+        function goToGamePage() {
+            if (selectedCards.length === 0) selectedCards.push(1); // ተጫዋቹ ምንም ካልመረጠ 1ኛውን ይዞ ይገባል
+            
+            // ዋሌት ቅነሳ ስሌት
+            let wallet = parseFloat(localStorage.getItem('vip_bingo_wallet')) || 100;
+            localStorage.setItem('vip_bingo_wallet', (wallet - (selectedCards.length * 10)).toString());
+            
             localStorage.setItem('selectedCardsList', JSON.stringify(selectedCards));
             window.location.href = 'game.html';
         }
-
-        fetchTakenCards();
     </script>
 </body>
 </html>
