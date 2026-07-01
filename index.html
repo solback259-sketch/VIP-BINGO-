@@ -6,21 +6,16 @@
     <title>VIP BINGO - ምርጫ</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        /* ሙሉ የስልኩን ስክሪን ቁመት ለመጠቀም */
         html, body { height: 100%; margin: 0; padding: 0; overflow: hidden; }
         body { font-family: 'Segoe UI', sans-serif; background-color: #1a1540; color: white; text-align: center; display: flex; flex-direction: column; padding: 10px; box-sizing: border-box; }
-        
         .welcome-box { background: #251f5c; padding: 10px; border-radius: 10px; margin-bottom: 10px; border: 1px solid #3d3580; flex-shrink: 0; }
         .timer-box { font-size: 14px; font-weight: bold; color: white; background: #3d3580; padding: 8px; border-radius: 8px; margin-bottom: 5px; }
         .timer-box.counting { background: #ff5722; box-shadow: 0 0 10px #ff5722; }
-        
-        /* 1-200 የቁጥሮች ሰሌዳ */
         .cards-section { max-height: 55%; overflow-y: auto; background: #251f5c; border-radius: 12px; padding: 5px; margin-bottom: 10px; flex-shrink: 0; }
         .grid-container { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; }
         .card-btn { background-color: #3d3580; color: white; border: none; padding: 12px 0; font-size: 15px; font-weight: bold; border-radius: 6px; cursor: pointer; }
         .card-btn.selected { background-color: #ff5722 !important; box-shadow: 0 0 8px #ff5722; }
-        
-        /* 📍 ማትሪክሱ የታችኛውን ክፍት ቦታ በሙሉ (flex: 1) እንዲይዝ ተደርጓል */
+        .card-btn.taken { background-color: #444444 !important; color: #888888 !important; cursor: not-allowed; opacity: 0.5; pointer-events: none; border: 1px dashed #555; }
         .summary-box { background: #251f5c; padding: 10px; border-radius: 10px; border: 1px solid #ffc107; text-align: left; flex: 1; display: flex; flex-direction: column; overflow: hidden; }
         .matrix-container { display: flex; flex-direction: column; gap: 8px; margin-top: 5px; flex: 1; overflow-y: auto; padding-right: 3px; }
         .mini-matrix-box { background: rgba(0,0,0,0.3); border: 1px solid #00c853; border-radius: 8px; padding: 5px; }
@@ -28,52 +23,62 @@
         .matrix-table { width: 100%; border-collapse: collapse; text-align: center; }
         .matrix-table th { background: #3d3580; color: white; font-size: 10px; padding: 2px; }
         .matrix-table td { background: white; color: #333; font-size: 11px; font-weight: bold; padding: 3px; border: 1px solid #ccc; }
+        .waiting-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(26, 21, 64, 0.98); z-index: 1000; justify-content: center; align-items: center; flex-direction: column; padding: 20px; }
+        .waiting-message { background: #251f5c; padding: 25px; border-radius: 15px; border: 2px solid #ff5722; text-align: center; max-width: 85%; }
     </style>
 </head>
 <body>
-
+    <div class="waiting-overlay" id="game-progress-overlay">
+        <div class="waiting-message">
+            <h2 style="color: #ff5722; margin: 0 0 15px 0;">ጨዋታ ተጀምሯል! 🎮</h2>
+            <p style="font-size: 15px; line-height: 1.6;">እባኩ ጨዋታው ስለተጀመረ እሰኪበቃ በትዕግስት ይጠብቁ...</p>
+            <div style="margin-top: 20px; color: #ffc107; font-size: 13px;" id="waiting-status-text">የቀጥታ ሁኔታ በመፈተሽ ላይ...</div>
+        </div>
+    </div>
     <div class="welcome-box">
         <div class="timer-box" id="countdown-timer">በቂ ተጫዋቾች እየተጠበቁ ነው...</div>
         <p style="margin: 3px 0; font-size: 12px; color: #00c853;">የተመረጡ፦ <span id="selected-count">0/3</span> | ሂሳብ፦ <span id="bet-amount">0</span> ETB</p>
     </div>
-
     <div class="cards-section">
         <div class="grid-container" id="cards-grid"></div>
     </div>
-
     <div class="summary-box">
         <span style="font-size: 12px; font-weight: bold; color: #ffc107; display: block; text-align: center;">የተመረጡ ካርቴላዎች የውስጥ ቁጥሮች (5x5)፦</span>
         <div id="selected-cards-view" class="matrix-container">
             <p style="color: #aaa; font-size: 12px; text-align: center; margin: 5px 0;">እስካሁን አልተመረጠም</p>
         </div>
     </div>
-
     <script>
+        const SERVER_URL = "https://vipdd.pythonanywhere.com"; 
         Telegram.WebApp.ready();
+        let telegramUser = Telegram.WebApp.initDataUnsafe?.user;
+        let myUserId = telegramUser ? String(telegramUser.id) : "user_" + Math.floor(Math.random() * 1000);
+
         let selectedCards = [];
-        let timerStarted = false;
-        let timeLeft = 40;
-        let countdownInterval = null;
         let cardMatrices = {};
 
         const grid = document.getElementById('cards-grid');
         for (let i = 1; i <= 200; i++) {
             const btn = document.createElement('button');
             btn.className = 'card-btn';
+            btn.id = `card-btn-${i}`;
             btn.innerText = i;
             btn.onclick = () => toggleSelection(i, btn);
             grid.appendChild(btn);
         }
 
-        function generateBingoMatrix() {
+        function generateBingoMatrix(cardNum) {
             let matrix = [];
+            let seed = cardNum * 777 + parseInt(myUserId.replace(/\D/g, '') || 1);
             for (let r = 0; r < 5; r++) {
                 matrix[r] = [];
                 for (let c = 0; c < 5; c++) {
                     if (r === 2 && c === 2) {
                         matrix[r][c] = "★";
                     } else {
-                        matrix[r][c] = Math.floor(Math.random() * 15) + 1 + (c * 15);
+                        seed = (seed * 9301 + 49297) % 233280;
+                        let val = Math.floor((seed / 233280) * 15) + 1 + (c * 15);
+                        matrix[r][c] = val;
                     }
                 }
             }
@@ -81,24 +86,25 @@
         }
 
         function toggleSelection(num, btn) {
+            if (btn.classList.contains('taken')) return;
             if (selectedCards.includes(num)) {
                 selectedCards = selectedCards.filter(c => c !== num);
                 btn.classList.remove('selected');
                 delete cardMatrices[num];
+                releaseCardOnServer(num);
             } else {
                 if (selectedCards.length >= 3) return;
                 selectedCards.push(num);
                 btn.classList.add('selected');
-                cardMatrices[num] = generateBingoMatrix();
+                cardMatrices[num] = generateBingoMatrix(num);
+                reserveCardOnServer(num);
             }
             updateUI();
-            checkLocalTimer();
         }
 
         function updateUI() {
             document.getElementById('selected-count').innerText = `${selectedCards.length}/3`;
             document.getElementById('bet-amount').innerText = selectedCards.length * 10;
-            
             const viewContainer = document.getElementById('selected-cards-view');
             if (selectedCards.length === 0) {
                 viewContainer.innerHTML = '<p style="color: #aaa; font-size: 12px; text-align: center; margin: 5px 0;">እስካሁን አልተመረጠም</p>';
@@ -106,14 +112,10 @@
                 viewContainer.innerHTML = '';
                 selectedCards.forEach(num => {
                     const matrix = cardMatrices[num];
+                    if(!matrix) return;
                     const box = document.createElement('div');
                     box.className = 'mini-matrix-box';
-                    
-                    let tableHTML = `
-                        <div class="matrix-title">🗂️ ካርቴላ #${num}</div>
-                        <table class="matrix-table">
-                            <tr><th>B</th><th>I</th><th>N</th><th>G</th><th>O</th></tr>
-                    `;
+                    let tableHTML = `<div class="matrix-title">🗂️ ካርቴላ #${num}</div><table class="matrix-table"><tr><th>B</th><th>I</th><th>N</th><th>G</th><th>O</th></tr>`;
                     for (let r = 0; r < 5; r++) {
                         tableHTML += '<tr>';
                         for (let c = 0; c < 5; c++) {
@@ -130,35 +132,59 @@
             }
         }
 
-        function checkLocalTimer() {
-            /* 📍 ማሻሻያ፦ ቆጣሪው የሚጀምረው 2 ወይም ከዚያ በላይ ካርድ ሲመረጥ ብቻ ነው */
-            if (selectedCards.length >= 2 && !timerStarted) {
-                timerStarted = true;
-                const timerEl = document.getElementById('countdown-timer');
-                timerEl.className = 'timer-box counting';
-                
-                countdownInterval = setInterval(() => {
-                    timeLeft--;
-                    timerEl.innerText = `ጨዋታው ለመጀመር፦ ${timeLeft} ሰከንድ`;
-                    if (timeLeft <= 0) {
-                        clearInterval(countdownInterval);
-                        goToGamePage();
-                    }
-                }, 1000);
-            } else if (selectedCards.length < 2 && timerStarted) {
-                clearInterval(countdownInterval);
-                timerStarted = false;
-                timeLeft = 40;
-                const timerEl = document.getElementById('countdown-timer');
-                timerEl.className = 'timer-box';
-                timerEl.innerText = "በቂ ተጫዋቾች እየተጠበቁ ነው...";
-            }
-        }
+        function syncWithServer() {
+            fetch(`${SERVER_URL}/api/game-state?user_id=${myUserId}`)
+            .then(res => res.json())
+            .then(data => {
+                if (data.is_started) {
+                    document.getElementById('game-progress-overlay').style.display = 'flex';
+                    document.getElementById('waiting-status-text').innerText = "ጨዋታው በአሁኑ ሰዓት በመካሄድ ላይ ነው...";
+                    return;
+                } else {
+                    document.getElementById('game-progress-overlay').style.display = 'none';
+                }
 
+                for (let i = 1; i <= 200; i++) {
+                    let btn = document.getElementById(`card-btn-${i}`);
+                    let cardStr = String(i);
+                    if (data.taken_cards[cardStr] && String(data.taken_cards[cardStr]) !== String(myUserId)) {
+                        btn.className = 'card-btn taken';
+                    } else if (selectedCards.includes(i)) {
+                        btn.className = 'card-btn selected';
+                    } else {
+                        btn.className = 'card-btn';
+                    }
+                }
+
+                const timerEl = document.getElementById('countdown-timer');
+                if (data.total_cards_selected >= 2) {
+                    timerEl.className = 'timer-box counting';
+                    timerEl.innerText = `ጨዋታው ለመጀመር፦ ${data.time_left} ሰከንድ`;
+                    if (data.time_left <= 0) goToGamePage();
+                } else {
+                    timerEl.className = 'timer-box';
+                    timerEl.innerText = "በቂ ተጫዋቾች እየተጠበቁ ነው... (ቢያንስ 2 ካርድ ያስፈልጋል)";
+                }
+            }).catch(err => console.log(err));
+        }
+        setInterval(syncWithServer, 1000);
+
+        function reserveCardOnServer(cardNum) {
+            fetch(`${SERVER_URL}/api/select-card`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ user_id: myUserId, card_num: cardNum })
+            });
+        }
+        function releaseCardOnServer(cardNum) {
+            fetch(`${SERVER_URL}/api/release-card`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ user_id: myUserId, card_num: cardNum })
+            });
+        }
         function goToGamePage() {
-            if (selectedCards.length === 0) selectedCards.push(1);
-            let wallet = parseFloat(localStorage.getItem('vip_bingo_wallet')) || 100;
-            localStorage.setItem('vip_bingo_wallet', (wallet - (selectedCards.length * 10)).toString());
+            if (selectedCards.length === 0) return;
             localStorage.setItem('selectedCardsList', JSON.stringify(selectedCards));
             window.location.href = 'game.html';
         }
