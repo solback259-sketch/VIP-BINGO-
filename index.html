@@ -8,13 +8,14 @@
     <style>
         body { font-family: 'Segoe UI', sans-serif; background-color: #1a1540; color: white; text-align: center; margin: 0; padding: 10px; }
         .welcome-box { background: #251f5c; padding: 10px; border-radius: 10px; margin-bottom: 10px; border: 1px solid #3d3580; }
-        .timer-box { font-size: 15px; font-weight: bold; color: white; background: #3d3580; padding: 8px; border-radius: 8px; margin-bottom: 5px; }
+        .timer-box { font-size: 14px; font-weight: bold; color: white; background: #3d3580; padding: 8px; border-radius: 8px; margin-bottom: 5px; }
         .timer-box.counting { background: #ff5722; box-shadow: 0 0 10px #ff5722; }
-        .grid-container { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; max-height: 200px; overflow-y: auto; padding: 5px; background: #251f5c; border-radius: 12px; }
-        .card-btn { background-color: #3d3580; color: white; border: none; padding: 10px 0; font-size: 13px; font-weight: bold; border-radius: 6px; cursor: pointer; }
+        
+        /* 📍 የቁጥሮች ማሳያ ቁመት ዝቅ እንዲል የተደረገበት (Compact Size) */
+        .grid-container { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; max-height: 165px; overflow-y: auto; padding: 5px; background: #251f5c; border-radius: 12px; }
+        .card-btn { background-color: #3d3580; color: white; border: none; padding: 8px 0; font-size: 13px; font-weight: bold; border-radius: 6px; cursor: pointer; }
         .card-btn.selected { background-color: #ff5722 !important; box-shadow: 0 0 8px #ff5722; }
         
-        /* 📊 የ 5x5 ማትሪክስ ስታይል */
         .summary-box { background: #251f5c; padding: 10px; border-radius: 10px; border: 1px solid #ffc107; margin-top: 10px; text-align: left; }
         .matrix-container { display: flex; flex-direction: column; gap: 10px; margin-top: 8px; }
         .mini-matrix-box { background: rgba(0,0,0,0.3); border: 1px solid #00c853; border-radius: 8px; padding: 5px; }
@@ -46,9 +47,8 @@
         let timerStarted = false;
         let timeLeft = 40;
         let countdownInterval = null;
-        let cardMatrices = {}; // የእያንዳንዱን ካርቴላ 5x5 ቁጥሮች ለማስቀመጥ
+        let cardMatrices = {};
 
-        // 1. የ 1-200 ምርጫ ሰሌዳ መሳል
         const grid = document.getElementById('cards-grid');
         for (let i = 1; i <= 200; i++) {
             const btn = document.createElement('button');
@@ -58,14 +58,13 @@
             grid.appendChild(btn);
         }
 
-        // 🎯 እውነተኛ የቢንጎ 5x5 ማትሪክስ ማመንጫ ፈንክሽን
         function generateBingoMatrix() {
             let matrix = [];
             for (let r = 0; r < 5; r++) {
                 matrix[r] = [];
                 for (let c = 0; c < 5; c++) {
                     if (r === 2 && c === 2) {
-                        matrix[r][c] = "★"; // መሃል ኮከብ
+                        matrix[r][c] = "★";
                     } else {
                         matrix[r][c] = Math.floor(Math.random() * 15) + 1 + (c * 15);
                     }
@@ -83,14 +82,12 @@
                 if (selectedCards.length >= 3) return;
                 selectedCards.push(num);
                 btn.classList.add('selected');
-                cardMatrices[num] = generateBingoMatrix(); // ማትሪክስ ፍጠር
+                cardMatrices[num] = generateBingoMatrix();
             }
-            
             updateUI();
             checkLocalTimer();
         }
 
-        // 📊 የ 5x5 ሰንጠረዡን በታችኛው ቦክስ ላይ መሳያ ህግ
         function updateUI() {
             document.getElementById('selected-count').innerText = `${selectedCards.length}/3`;
             document.getElementById('bet-amount').innerText = selectedCards.length * 10;
@@ -110,7 +107,6 @@
                         <table class="matrix-table">
                             <tr><th>B</th><th>I</th><th>N</th><th>G</th><th>O</th></tr>
                     `;
-                    
                     for (let r = 0; r < 5; r++) {
                         tableHTML += '<tr>';
                         for (let c = 0; c < 5; c++) {
@@ -127,9 +123,7 @@
             }
         }
 
-        // ⏱️ የ 40 ሰከንድ ቆጣሪ መቆጣጠሪያ (ከሰርቨር ነጻ የሆነ)
         function checkLocalTimer() {
-            // በጠቅላላው 2 ወይም ከዚያ በላይ ካርቴላ ሲመረጥ ቆጣሪው ይጀምራል
             if (selectedCards.length >= 2 && !timerStarted) {
                 timerStarted = true;
                 const timerEl = document.getElementById('countdown-timer');
@@ -144,7 +138,6 @@
                     }
                 }, 1000);
             } else if (selectedCards.length < 2 && timerStarted) {
-                // ቁጥሩ ከ 2 በታች ከወረደ ቆጣሪው ይመለሳል
                 clearInterval(countdownInterval);
                 timerStarted = false;
                 timeLeft = 40;
@@ -156,10 +149,8 @@
 
         function goToGamePage() {
             if (selectedCards.length === 0) selectedCards.push(1);
-            
             let wallet = parseFloat(localStorage.getItem('vip_bingo_wallet')) || 100;
             localStorage.setItem('vip_bingo_wallet', (wallet - (selectedCards.length * 10)).toString());
-            
             localStorage.setItem('selectedCardsList', JSON.stringify(selectedCards));
             window.location.href = 'game.html';
         }
