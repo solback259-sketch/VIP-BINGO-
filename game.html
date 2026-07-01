@@ -10,27 +10,32 @@
         .stats-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; margin-bottom: 15px; }
         .stat-box { background-color: #251f5c; padding: 8px 1px; border-radius: 8px; font-size: 10px; font-weight: bold; border: 1px solid #3d3580; }
         .stat-val { color: #ffc107; font-size: 12px; margin-top: 3px; }
+        
         .game-layout { display: flex; gap: 10px; justify-content: center; align-items: flex-start; }
-        
         .called-board { background-color: #251f5c; border-radius: 12px; padding: 8px; width: 45%; border: 1px solid #3d3580; }
-        .board-column { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; }
         
-        /* 📍 የ BINGO መለያ ፊደላት ማሳያ ስታይል */
-        .board-header { background-color: #ff9800; color: white; font-size: 13px; font-weight: bold; padding: 5px 0; border-radius: 4px; text-transform: uppercase; box-shadow: 0 0 5px rgba(255,152,0,0.5); }
+        /* 📍 የ BINGO ፊደላት ሰሌዳ መደርደሪያ እኩል ስፋት እንዲኖራቸው ተደርጓል */
+        .board-column { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; justify-items: stretch; }
+        .board-header { background-color: #ff9800; color: white; font-size: 13px; font-weight: bold; padding: 5px 0; border-radius: 4px; text-transform: uppercase; text-align: center; width: 100%; box-sizing: border-box; }
         
-        .board-cell { background-color: #3d3580; border-radius: 4px; font-size: 11px; font-weight: bold; padding: 6px 0; }
+        .board-cell { background-color: #3d3580; border-radius: 4px; font-size: 11px; font-weight: bold; padding: 6px 0; text-align: center; }
         .board-cell.active-now { background-color: #00c853 !important; }
         .board-cell.active-past { background-color: #ff5722 !important; }
         
         .right-panel { width: 52%; display: flex; flex-direction: column; gap: 10px; align-items: center; }
         .big-ball-container { background-color: #251f5c; width: 100%; padding: 12px 0; border-radius: 12px; border: 1px solid #3d3580; }
         .big-ball { background: white; color: #251f5c; width: 80px; height: 80px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: bold; border: 4px solid #ffc107; margin: 0 auto; }
-        .cartel-box { background: #251f5c; border-radius: 12px; padding: 10px; width: 100%; border: 1px solid #3d3580; box-sizing: border-box; }
-        .bingo-table { width: 100%; border-collapse: separate; border-spacing: 3px; }
-        .bingo-th { font-size: 12px; padding: 5px 0; border-radius: 3px; position: relative; }
-        .cartela-label-top { position: absolute; top: -16px; left: 50%; transform: translateX(-50%); font-size: 9px; color: #ff9800; font-weight: bold; white-space: nowrap; }
-        .bingo-td { background-color: #ffffff; color: #333; font-weight: bold; padding: 8px 0; border-radius: 3px; font-size: 12px; }
+        
+        .cartel-box { background: #251f5c; border-radius: 12px; padding: 10px; width: 100%; border: 1px solid #3d3580; box-sizing: border-box; position: relative; padding-top: 20px; margin-bottom: 5px; }
+        .cartela-label-top { position: absolute; top: 4px; right: 10px; font-size: 10px; color: #ff9800; font-weight: bold; }
+        
+        .bingo-table { width: 100%; border-collapse: separate; border-spacing: 3px; table-layout: fixed; }
+        .bingo-th { font-size: 12px; padding: 6px 0; border-radius: 3px; color: white; text-align: center; }
+        
+        /* 📍 ቁጥሮቹ በትክክል ሳጥኑ መሃል ላይ እንዲሆኑ (Center) የተደረገበት */
+        .bingo-td { background-color: #ffffff; color: #333; font-weight: bold; padding: 8px 0; border-radius: 3px; font-size: 12px; text-align: center; vertical-align: middle; }
         .bingo-td.matched { background-color: #00c853 !important; color: white !important; }
+        
         .bingo-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(26, 21, 64, 0.95); z-index: 999; justify-content: center; align-items: center; flex-direction: column; }
         .announcement-box { background: #251f5c; padding: 20px; border-radius: 15px; border: 2px solid #ffc107; width: 85%; max-width: 320px; }
     </style>
@@ -39,7 +44,8 @@
 
     <div class="stats-grid">
         <div class="stat-box">GAME ID<div class="stat-val">VIP-102</div></div>
-        <div class="stat-box">PLAYERS<div class="stat-val" id="live-players">125</div></div>
+        <!-- 📍 መጀመሪያ የተጫዋች ብዛት በመጠበቅ ላይ ይላል -->
+        <div class="stat-box">PLAYERS<div class="stat-val" id="live-players">ማጣራት...</div></div>
         <div class="stat-box">WALLET<div class="stat-val" id="my-wallet">-- ETB</div></div>
         <div class="stat-box">DERASH<div class="stat-val" id="live-prize">250 ETB</div></div>
         <div class="stat-box">CALLED<div class="stat-val" id="called-count">0</div></div>
@@ -72,7 +78,6 @@
 
         const numbersGrid = document.getElementById('numbers-grid');
         
-        // 📍 ከላይ የ B I N G O መለያ ፊደላትን በአምድ መደርደሪያነት መጨመሪያ ሎጂክ
         const bingoLetters = ['B', 'I', 'N', 'G', 'O'];
         bingoLetters.forEach(letter => {
             const headerCell = document.createElement('div');
@@ -81,7 +86,6 @@
             numbersGrid.appendChild(headerCell);
         });
 
-        // የ 1-75 ቁጥሮችን ወደታች መደርደር
         for (let r = 0; r < 15; r++) {
             for (let c = 0; c < 5; c++) {
                 let num = (c * 15) + r + 1;
@@ -102,13 +106,14 @@
             cartelBox.className = 'cartel-box';
             
             let tableHTML = `
+                <div class="cartela-label-top">CARTELA #${cardNum}</div>
                 <table class="bingo-table" id="table-card-${cardNum}">
                     <tr>
                         <th class="bingo-th" style="background:#007bff;">B</th>
                         <th class="bingo-th" style="background:#6f42c1;">I</th>
                         <th class="bingo-th" style="background:#e83e8c;">N</th>
                         <th class="bingo-th" style="background:#28a745;">G</th>
-                        <th class="bingo-th" style="background:#fd7e14;">O <div class="cartela-label-top">CARTELA #${cardNum}</div></th>
+                        <th class="bingo-th" style="background:#fd7e14;">O</th>
                     </tr>
             `;
             for(let r=0; r<5; r++) {
@@ -152,6 +157,15 @@
             .then(res => res.json())
             .then(data => {
                 document.getElementById('my-wallet').innerText = (localStorage.getItem('vip_bingo_wallet') || "100") + " ETB";
+                // 📍 ከሰርቨር የመጣውን ትክክለኛ የተጫዋች ብዛት እዚህ ጋር ያሳያል
+                if(data.active_players) {
+                    document.getElementById('live-players').innerText = data.active_players;
+                } else {
+                    document.getElementById('live-players').innerText = "1"; // ሰርቨሩ ላይ ከሌለ 1 ያደርጋል
+                }
+            })
+            .catch(err => {
+                document.getElementById('live-players').innerText = "1";
             });
         }
         connectToBackend();
