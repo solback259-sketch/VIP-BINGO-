@@ -11,17 +11,17 @@
         .stat-box { background-color: #251f5c; padding: 8px 1px; border-radius: 8px; font-size: 10px; font-weight: bold; border: 1px solid #3d3580; }
         .stat-val { color: #ffc107; font-size: 12px; margin-top: 3px; }
         .game-layout { display: flex; gap: 10px; justify-content: center; align-items: flex-start; }
-        .called-board { background-color: #251f5c; border-radius: 12px; padding: 8px; width: 42%; border: 1px solid #3d3580; }
+        
+        /* 📍 የ 1-75 ሰሌዳ ስፋት ማስተካከያ */
+        .called-board { background-color: #251f5c; border-radius: 12px; padding: 8px; width: 45%; border: 1px solid #3d3580; }
         .board-column { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; }
         .board-cell { background-color: #3d3580; border-radius: 4px; font-size: 11px; font-weight: bold; padding: 6px 0; }
         .board-cell.active-now { background-color: #00c853 !important; }
         .board-cell.active-past { background-color: #ff5722 !important; }
-        .right-panel { width: 55%; display: flex; flex-direction: column; gap: 10px; align-items: center; }
+        
+        .right-panel { width: 52%; display: flex; flex-direction: column; gap: 10px; align-items: center; }
         .big-ball-container { background-color: #251f5c; width: 100%; padding: 12px 0; border-radius: 12px; border: 1px solid #3d3580; }
-        
-        /* 📍 የፊደል እና የቁጥር ማሳያ ስታይል (B-12 ሰፋ ተደርጎ) */
-        .big-ball { background: white; color: #251f5c; width: 85px; height: 85px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 26px; font-weight: bold; border: 4px solid #ffc107; margin: 0 auto; box-shadow: 0 0 15px rgba(255,255,255,0.2); }
-        
+        .big-ball { background: white; color: #251f5c; width: 80px; height: 80px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: bold; border: 4px solid #ffc107; margin: 0 auto; }
         .cartel-box { background: #251f5c; border-radius: 12px; padding: 10px; width: 100%; border: 1px solid #3d3580; box-sizing: border-box; }
         .bingo-table { width: 100%; border-collapse: separate; border-spacing: 3px; }
         .bingo-th { font-size: 12px; padding: 5px 0; border-radius: 3px; position: relative; }
@@ -36,16 +36,15 @@
 
     <div class="stats-grid">
         <div class="stat-box">GAME ID<div class="stat-val">VIP-102</div></div>
-        <div class="stat-box">PLAYERS<div class="stat-val" id="live-players">1</div></div>
+        <div class="stat-box">PLAYERS<div class="stat-val" id="live-players">125</div></div>
         <div class="stat-box">WALLET<div class="stat-val" id="my-wallet">-- ETB</div></div>
-        <div class="stat-box">DERASH<div class="stat-val" id="live-prize">0 ETB</div></div>
+        <div class="stat-box">DERASH<div class="stat-val" id="live-prize">250 ETB</div></div>
         <div class="stat-box">CALLED<div class="stat-val" id="called-count">0</div></div>
     </div>
 
     <div class="game-layout">
         <div class="called-board"><div class="board-column" id="numbers-grid"></div></div>
         <div class="right-panel">
-            <!-- 🎰 ትልቁ ኳስ ከነፊደሉ የሚታይበት ቦታ -->
             <div class="big-ball-container"><div class="big-ball" id="current-ball">--</div></div>
             <div id="all-my-cartelas-container" style="width: 100%; display: flex; flex-direction: column; gap: 15px;"></div>
         </div>
@@ -63,19 +62,22 @@
 
     <script>
         const SERVER_URL = "https://bdej.pythonanywhere.com";
-
         Telegram.WebApp.ready();
         let telegramUser = Telegram.WebApp.initDataUnsafe?.user;
         let myUserId = telegramUser ? telegramUser.id : "local_test_" + Math.floor(Math.random() * 1000);
         let playerDisplayName = telegramUser ? telegramUser.first_name : "ተጫዋች";
 
+        // 🎯 የ 1-75 ሰሌዳ ቁጥሮች ወደታች (Vertical) እንዲሰለፉ የማድረጊያ ሎጂክ
         const numbersGrid = document.getElementById('numbers-grid');
-        for (let i = 1; i <= 75; i++) {
-            const cell = document.createElement('div');
-            cell.className = 'board-cell';
-            cell.innerText = i;
-            cell.id = `board-num-${i}`;
-            numbersGrid.appendChild(cell);
+        for (let r = 0; r < 15; r++) {
+            for (let c = 0; c < 5; c++) {
+                let num = (c * 15) + r + 1;
+                const cell = document.createElement('div');
+                cell.className = 'board-cell';
+                cell.innerText = num;
+                cell.id = `board-num-${num}`;
+                numbersGrid.appendChild(cell);
+            }
         }
 
         let selectedCards = JSON.parse(localStorage.getItem('selectedCardsList')) || [1];
@@ -96,7 +98,6 @@
                         <th class="bingo-th" style="background:#fd7e14;">O <div class="cartela-label-top">CARTELA #${cardNum}</div></th>
                     </tr>
             `;
-            
             for(let r=0; r<5; r++) {
                 tableHTML += `<tr>`;
                 for(let c=0; c<5; c++) {
@@ -137,18 +138,14 @@
             })
             .then(res => res.json())
             .then(data => {
-                document.getElementById('my-wallet').innerText = data.wallet + " ETB";
-                document.getElementById('live-players').innerText = data.players_count;
-                document.getElementById('live-prize').innerText = data.derash + " ETB";
+                document.getElementById('my-wallet').innerText = (localStorage.getItem('vip_bingo_wallet') || "100") + " ETB";
             });
         }
-
         connectToBackend();
 
         let allNumbers = Array.from({length: 75}, (_, i) => i + 1);
         let currentActiveNum = null;
 
-        // 🎯 የቢንጎ ፊደልን ከቁጥሩ ጋር የማጣመጃ ፈንክሽን
         function getBingoLetter(num) {
             if (num >= 1 && num <= 15) return "B";
             if (num >= 16 && num <= 30) return "I";
@@ -167,10 +164,8 @@
             if (currentActiveNum) document.getElementById(`board-num-${currentActiveNum}`).className = 'board-cell active-past';
             currentActiveNum = pickedNum;
             
-            // 📍 እዚህ ጋር ፊደሉን እና ቁጥሩን አጣምሮ በትልቁ ያሳያል (B-12)
             let letter = getBingoLetter(pickedNum);
             document.getElementById('current-ball').innerText = `${letter}-${pickedNum}`;
-            
             document.getElementById(`board-num-${pickedNum}`).className = 'board-cell active-now';
             
             checkAndMatchAllCards(pickedNum);
@@ -195,33 +190,17 @@
                 const cell = row.getElementsByTagName('td')[c];
                 return cell.classList.contains('matched') || cell.innerText === '★';
             }
-
             let won = false;
             let type = "";
-
             for (let r = 0; r < 5; r++) { if (isMarked(r,0) && isMarked(r,1) && isMarked(r,2) && isMarked(r,3) && isMarked(r,4)) { won = true; type = "Horizontal (አግድም)"; } }
             for (let c = 0; c < 5; c++) { if (isMarked(0,c) && isMarked(1,c) && isMarked(2,c) && isMarked(3,c) && isMarked(4,c)) { won = true; type = "Vertical (ወደታች)"; } }
             if (isMarked(0,0) && isMarked(1,1) && isMarked(2,2) && isMarked(3,3) && isMarked(4,4)) { won = true; type = "Diagonal (ሰያፍ)"; }
             if (isMarked(0,4) && isMarked(1,3) && isMarked(2,2) && isMarked(3,1) && isMarked(4,0)) { won = true; type = "Diagonal (ሰያፍ)"; }
-
             if(won) triggerBingoWin(type, cardNum);
         }
 
         function triggerBingoWin(winType, winningCard) {
             clearInterval(callInterval);
-
-            fetch(`${SERVER_URL}/api/win`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ user_id: myUserId })
-            })
-            .then(res => res.json())
-            .then(data => {
-                if(data.status === "won") {
-                    document.getElementById('my-wallet').innerText = data.updated_wallet + " ETB";
-                }
-            });
-
             document.getElementById('bingo-screen').style.display = 'flex';
             document.getElementById('win-type').innerText = winType;
             document.getElementById('winner-name').innerText = playerDisplayName; 
@@ -233,8 +212,7 @@
                 document.getElementById('restart-timer').innerText = `በ ${returnTime} ሰከንድ ውስጥ ወደ ካርድ ምርጫ ይመለሳል...`;
                 if (returnTime <= 0) {
                     clearInterval(returnInterval);
-                    fetch(`${SERVER_URL}/api/restart`, { method: "POST" })
-                    .then(() => { window.location.href = 'index.html'; });
+                    window.location.href = 'index.html';
                 }
             }, 1000);
         }
