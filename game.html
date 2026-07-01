@@ -11,21 +11,21 @@
         .stat-box { background-color: #251f5c; padding: 8px 1px; border-radius: 8px; font-size: 10px; font-weight: bold; border: 1px solid #3d3580; }
         .stat-val { color: #ffc107; font-size: 12px; margin-top: 3px; }
         .game-layout { display: flex; gap: 10px; justify-content: center; align-items: flex-start; }
-        .called-board { background-color: #251f5c; border-radius: 12px; padding: 8px; width: 45%; border: 1px solid #3d3580; }
+        .called-board { background-color: #251f5c; border-radius: 12px; padding: 8px; width: 42%; border: 1px solid #3d3580; }
         .board-column { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; }
         .board-cell { background-color: #3d3580; border-radius: 4px; font-size: 11px; font-weight: bold; padding: 6px 0; }
         .board-cell.active-now { background-color: #00c853 !important; }
         .board-cell.active-past { background-color: #ff5722 !important; }
-        .right-panel { width: 50%; display: flex; flex-direction: column; gap: 10px; align-items: center; }
-        .big-ball-container { background-color: #251f5c; width: 100%; padding: 15px 0; border-radius: 12px; border: 1px solid #3d3580; }
-        .big-ball { background: white; color: #251f5c; width: 65px; height: 65px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: bold; border: 4px solid #ffc107; margin: 0 auto; }
+        .right-panel { width: 55%; display: flex; flex-direction: column; gap: 10px; align-items: center; }
+        .big-ball-container { background-color: #251f5c; width: 100%; padding: 12px 0; border-radius: 12px; border: 1px solid #3d3580; }
+        
+        /* 📍 የፊደል እና የቁጥር ማሳያ ስታይል (B-12 ሰፋ ተደርጎ) */
+        .big-ball { background: white; color: #251f5c; width: 85px; height: 85px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 26px; font-weight: bold; border: 4px solid #ffc107; margin: 0 auto; box-shadow: 0 0 15px rgba(255,255,255,0.2); }
+        
         .cartel-box { background: #251f5c; border-radius: 12px; padding: 10px; width: 100%; border: 1px solid #3d3580; box-sizing: border-box; }
         .bingo-table { width: 100%; border-collapse: separate; border-spacing: 3px; }
         .bingo-th { font-size: 12px; padding: 5px 0; border-radius: 3px; position: relative; }
-        
-        /* 📍 የካርቴላ ቁጥር በ 5ኛው ፊደል (O) ላይ እንዲሆን ማድረጊያ ስታይል */
         .cartela-label-top { position: absolute; top: -16px; left: 50%; transform: translateX(-50%); font-size: 9px; color: #ff9800; font-weight: bold; white-space: nowrap; }
-        
         .bingo-td { background-color: #ffffff; color: #333; font-weight: bold; padding: 8px 0; border-radius: 3px; font-size: 12px; }
         .bingo-td.matched { background-color: #00c853 !important; color: white !important; }
         .bingo-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(26, 21, 64, 0.95); z-index: 999; justify-content: center; align-items: center; flex-direction: column; }
@@ -45,6 +45,7 @@
     <div class="game-layout">
         <div class="called-board"><div class="board-column" id="numbers-grid"></div></div>
         <div class="right-panel">
+            <!-- 🎰 ትልቁ ኳስ ከነፊደሉ የሚታይበት ቦታ -->
             <div class="big-ball-container"><div class="big-ball" id="current-ball">--</div></div>
             <div id="all-my-cartelas-container" style="width: 100%; display: flex; flex-direction: column; gap: 15px;"></div>
         </div>
@@ -80,9 +81,8 @@
         let selectedCards = JSON.parse(localStorage.getItem('selectedCardsList')) || [1];
         const cartelasContainer = document.getElementById('all-my-cartelas-container');
 
-        selectedCards.forEach((cardNum, idx) => {
+        selectedCards.forEach((cardNum) => {
             let mockMatrix = generateMockMatrixForCard(cardNum);
-            
             let cartelBox = document.createElement('div');
             cartelBox.className = 'cartel-box';
             
@@ -148,6 +148,16 @@
         let allNumbers = Array.from({length: 75}, (_, i) => i + 1);
         let currentActiveNum = null;
 
+        // 🎯 የቢንጎ ፊደልን ከቁጥሩ ጋር የማጣመጃ ፈንክሽን
+        function getBingoLetter(num) {
+            if (num >= 1 && num <= 15) return "B";
+            if (num >= 16 && num <= 30) return "I";
+            if (num >= 31 && num <= 45) return "N";
+            if (num >= 46 && num <= 60) return "G";
+            if (num >= 61 && num <= 75) return "O";
+            return "";
+        }
+
         const callInterval = setInterval(() => {
             if (allNumbers.length === 0) { clearInterval(callInterval); return; }
             const randomIndex = Math.floor(Math.random() * allNumbers.length);
@@ -156,7 +166,11 @@
 
             if (currentActiveNum) document.getElementById(`board-num-${currentActiveNum}`).className = 'board-cell active-past';
             currentActiveNum = pickedNum;
-            document.getElementById('current-ball').innerText = pickedNum;
+            
+            // 📍 እዚህ ጋር ፊደሉን እና ቁጥሩን አጣምሮ በትልቁ ያሳያል (B-12)
+            let letter = getBingoLetter(pickedNum);
+            document.getElementById('current-ball').innerText = `${letter}-${pickedNum}`;
+            
             document.getElementById(`board-num-${pickedNum}`).className = 'board-cell active-now';
             
             checkAndMatchAllCards(pickedNum);
@@ -226,5 +240,4 @@
         }
     </script>
 </body>
-    </html>
-    
+</html>
