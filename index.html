@@ -11,31 +11,33 @@
         .timer-box { font-size: 14px; font-weight: bold; color: white; background: #3d3580; padding: 8px; border-radius: 8px; margin-bottom: 5px; }
         .timer-box.counting { background: #ff5722; box-shadow: 0 0 10px #ff5722; }
         
-        /* 📍 የቁጥሮች ማሳያ ቁመት ዝቅ እንዲል የተደረገበት (Compact Size) */
-        .grid-container { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; max-height: 165px; overflow-y: auto; padding: 5px; background: #251f5c; border-radius: 12px; }
-        .card-btn { background-color: #3d3580; color: white; border: none; padding: 8px 0; font-size: 13px; font-weight: bold; border-radius: 6px; cursor: pointer; }
+        /* 📍 የ 1-200 ቁጥሮች ሰሌዳ ሰፊ ቦታ እንዲይዝ የተደረገበት */
+        .grid-container { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; max-height: 380px; overflow-y: auto; padding: 5px; background: #251f5c; border-radius: 12px; }
+        .card-btn { background-color: #3d3580; color: white; border: none; padding: 10px 0; font-size: 14px; font-weight: bold; border-radius: 6px; cursor: pointer; }
         .card-btn.selected { background-color: #ff5722 !important; box-shadow: 0 0 8px #ff5722; }
         
-        .summary-box { background: #251f5c; padding: 10px; border-radius: 10px; border: 1px solid #ffc107; margin-top: 10px; text-align: left; }
-        .matrix-container { display: flex; flex-direction: column; gap: 10px; margin-top: 8px; }
+        /* 📍 የማትሪክስ ማሳያ ቦታ በጣም እንዲያንስና Scroll እንዲያደርግ የተደረገበት */
+        .summary-box { background: #251f5c; padding: 8px; border-radius: 10px; border: 1px solid #ffc107; margin-top: 10px; text-align: left; }
+        .matrix-container { display: flex; flex-direction: column; gap: 8px; margin-top: 5px; max-height: 110px; overflow-y: auto; padding-right: 3px; }
         .mini-matrix-box { background: rgba(0,0,0,0.3); border: 1px solid #00c853; border-radius: 8px; padding: 5px; }
         .matrix-title { color: #ffc107; font-size: 12px; font-weight: bold; margin-bottom: 4px; text-align: center; }
         .matrix-table { width: 100%; border-collapse: collapse; text-align: center; }
         .matrix-table th { background: #3d3580; color: white; font-size: 10px; padding: 2px; }
-        .matrix-table td { background: white; color: #333; font-size: 11px; font-weight: bold; padding: 4px; border: 1px solid #ccc; }
+        .matrix-table td { background: white; color: #333; font-size: 11px; font-weight: bold; padding: 3px; border: 1px solid #ccc; }
     </style>
 </head>
 <body>
 
     <div class="welcome-box">
-        <div class="timer-box" id="countdown-timer">ጨዋታው ለመጀመር ቢያንስ 2 ካርቴላ መመረጥ አለበት...</div>
+        <!-- 📍 ጽሑፉ ወደ "በቂ ተጫዋቾች እየተጠበቁ ነው..." ተቀይሯል -->
+        <div class="timer-box" id="countdown-timer">በቂ ተጫዋቾች እየተጠበቁ ነው...</div>
         <p style="margin: 3px 0; font-size: 12px; color: #00c853;">የተመረጡ፦ <span id="selected-count">0/3</span> | ሂሳብ፦ <span id="bet-amount">0</span> ETB</p>
     </div>
 
     <div class="grid-container" id="cards-grid"></div>
 
     <div class="summary-box">
-        <span style="font-size: 13px; font-weight: bold; color: #ffc107; display: block; text-align: center;">የተመረጡ ካርቴላዎች የውስጥ ቁጥሮች (5x5)፦</span>
+        <span style="font-size: 12px; font-weight: bold; color: #ffc107; display: block; text-align: center;">የተመረጡ ካርቴላዎች የውስጥ ቁጥሮች (5x5)፦</span>
         <div id="selected-cards-view" class="matrix-container">
             <p style="color: #aaa; font-size: 12px; text-align: center; margin: 5px 0;">እስካሁን አልተመረጠም</p>
         </div>
@@ -124,7 +126,8 @@
         }
 
         function checkLocalTimer() {
-            if (selectedCards.length >= 2 && !timerStarted) {
+            // ተጫዋቹ ቢያንስ 1 ካርድ ሲመርጥ ቆጣሪው እንዲጀምር ተደርጓል
+            if (selectedCards.length >= 1 && !timerStarted) {
                 timerStarted = true;
                 const timerEl = document.getElementById('countdown-timer');
                 timerEl.className = 'timer-box counting';
@@ -137,13 +140,13 @@
                         goToGamePage();
                     }
                 }, 1000);
-            } else if (selectedCards.length < 2 && timerStarted) {
+            } else if (selectedCards.length < 1 && timerStarted) {
                 clearInterval(countdownInterval);
                 timerStarted = false;
                 timeLeft = 40;
                 const timerEl = document.getElementById('countdown-timer');
                 timerEl.className = 'timer-box';
-                timerEl.innerText = "ጨዋታው ለመጀመር ቢያንስ 2 ካርቴላ መመረጥ አለበት...";
+                timerEl.innerText = "በቂ ተጫዋቾች እየተጠበቁ ነው...";
             }
         }
 
