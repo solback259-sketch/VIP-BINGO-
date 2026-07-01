@@ -6,7 +6,7 @@
     <title>VIP BINGO - ምርጫ</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        /* 📍 ሙሉ የስልኩን ስክሪን ቁመት እንዲጠቀም የተደረገበት ማስተካከያ */
+        /* ሙሉ የስልኩን ስክሪን ቁመት ለመጠቀም */
         html, body { height: 100%; margin: 0; padding: 0; overflow: hidden; }
         body { font-family: 'Segoe UI', sans-serif; background-color: #1a1540; color: white; text-align: center; display: flex; flex-direction: column; padding: 10px; box-sizing: border-box; }
         
@@ -14,14 +14,15 @@
         .timer-box { font-size: 14px; font-weight: bold; color: white; background: #3d3580; padding: 8px; border-radius: 8px; margin-bottom: 5px; }
         .timer-box.counting { background: #ff5722; box-shadow: 0 0 10px #ff5722; }
         
-        /* 📍 የቁጥሮች ሰሌዳው የቀረውን ሙሉ ቦታ (Flex-grow) እንዲይዝ ተደርጓል */
-        .grid-container { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; flex: 1; overflow-y: auto; padding: 5px; background: #251f5c; border-radius: 12px; margin-bottom: 10px; }
+        /* 1-200 የቁጥሮች ሰሌዳ */
+        .cards-section { max-height: 55%; overflow-y: auto; background: #251f5c; border-radius: 12px; padding: 5px; margin-bottom: 10px; flex-shrink: 0; }
+        .grid-container { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; }
         .card-btn { background-color: #3d3580; color: white; border: none; padding: 12px 0; font-size: 15px; font-weight: bold; border-radius: 6px; cursor: pointer; }
         .card-btn.selected { background-color: #ff5722 !important; box-shadow: 0 0 8px #ff5722; }
         
-        /* 📍 ማትሪክሱ በታችኛው ክፍል ተለጥፎ እንዲቀመጥ */
-        .summary-box { background: #251f5c; padding: 8px; border-radius: 10px; border: 1px solid #ffc107; text-align: left; flex-shrink: 0; }
-        .matrix-container { display: flex; flex-direction: column; gap: 8px; margin-top: 5px; max-height: 115px; overflow-y: auto; padding-right: 3px; }
+        /* 📍 ማትሪክሱ የታችኛውን ክፍት ቦታ በሙሉ (flex: 1) እንዲይዝ ተደርጓል */
+        .summary-box { background: #251f5c; padding: 10px; border-radius: 10px; border: 1px solid #ffc107; text-align: left; flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+        .matrix-container { display: flex; flex-direction: column; gap: 8px; margin-top: 5px; flex: 1; overflow-y: auto; padding-right: 3px; }
         .mini-matrix-box { background: rgba(0,0,0,0.3); border: 1px solid #00c853; border-radius: 8px; padding: 5px; }
         .matrix-title { color: #ffc107; font-size: 12px; font-weight: bold; margin-bottom: 4px; text-align: center; }
         .matrix-table { width: 100%; border-collapse: collapse; text-align: center; }
@@ -36,7 +37,9 @@
         <p style="margin: 3px 0; font-size: 12px; color: #00c853;">የተመረጡ፦ <span id="selected-count">0/3</span> | ሂሳብ፦ <span id="bet-amount">0</span> ETB</p>
     </div>
 
-    <div class="grid-container" id="cards-grid"></div>
+    <div class="cards-section">
+        <div class="grid-container" id="cards-grid"></div>
+    </div>
 
     <div class="summary-box">
         <span style="font-size: 12px; font-weight: bold; color: #ffc107; display: block; text-align: center;">የተመረጡ ካርቴላዎች የውስጥ ቁጥሮች (5x5)፦</span>
@@ -128,7 +131,8 @@
         }
 
         function checkLocalTimer() {
-            if (selectedCards.length >= 1 && !timerStarted) {
+            /* 📍 ማሻሻያ፦ ቆጣሪው የሚጀምረው 2 ወይም ከዚያ በላይ ካርድ ሲመረጥ ብቻ ነው */
+            if (selectedCards.length >= 2 && !timerStarted) {
                 timerStarted = true;
                 const timerEl = document.getElementById('countdown-timer');
                 timerEl.className = 'timer-box counting';
@@ -141,7 +145,7 @@
                         goToGamePage();
                     }
                 }, 1000);
-            } else if (selectedCards.length < 1 && timerStarted) {
+            } else if (selectedCards.length < 2 && timerStarted) {
                 clearInterval(countdownInterval);
                 timerStarted = false;
                 timeLeft = 40;
