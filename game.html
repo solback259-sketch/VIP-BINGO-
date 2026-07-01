@@ -12,9 +12,12 @@
         .stat-val { color: #ffc107; font-size: 12px; margin-top: 3px; }
         .game-layout { display: flex; gap: 10px; justify-content: center; align-items: flex-start; }
         
-        /* 📍 የ 1-75 ሰሌዳ ስፋት ማስተካከያ */
         .called-board { background-color: #251f5c; border-radius: 12px; padding: 8px; width: 45%; border: 1px solid #3d3580; }
         .board-column { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; }
+        
+        /* 📍 የ BINGO መለያ ፊደላት ማሳያ ስታይል */
+        .board-header { background-color: #ff9800; color: white; font-size: 13px; font-weight: bold; padding: 5px 0; border-radius: 4px; text-transform: uppercase; box-shadow: 0 0 5px rgba(255,152,0,0.5); }
+        
         .board-cell { background-color: #3d3580; border-radius: 4px; font-size: 11px; font-weight: bold; padding: 6px 0; }
         .board-cell.active-now { background-color: #00c853 !important; }
         .board-cell.active-past { background-color: #ff5722 !important; }
@@ -67,8 +70,18 @@
         let myUserId = telegramUser ? telegramUser.id : "local_test_" + Math.floor(Math.random() * 1000);
         let playerDisplayName = telegramUser ? telegramUser.first_name : "ተጫዋች";
 
-        // 🎯 የ 1-75 ሰሌዳ ቁጥሮች ወደታች (Vertical) እንዲሰለፉ የማድረጊያ ሎጂክ
         const numbersGrid = document.getElementById('numbers-grid');
+        
+        // 📍 ከላይ የ B I N G O መለያ ፊደላትን በአምድ መደርደሪያነት መጨመሪያ ሎጂክ
+        const bingoLetters = ['B', 'I', 'N', 'G', 'O'];
+        bingoLetters.forEach(letter => {
+            const headerCell = document.createElement('div');
+            headerCell.className = 'board-header';
+            headerCell.innerText = letter;
+            numbersGrid.appendChild(headerCell);
+        });
+
+        // የ 1-75 ቁጥሮችን ወደታች መደርደር
         for (let r = 0; r < 15; r++) {
             for (let c = 0; c < 5; c++) {
                 let num = (c * 15) + r + 1;
